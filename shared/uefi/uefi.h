@@ -1,22 +1,27 @@
+#ifndef UEFI_H
+#define UEFI_H
+
 #include <stdint.h>
 
-/* UEFI Data Types UEFI Specification v2.10 2.3.1 */
-/* 
-typedef uint8_t  UEFI_BOOLEAN;
-typedef int64_t  UEFI_INTN;
-typedef uint64_t UEFI_UINTN;
-typedef int8_t   UEFI_INT8;
-typedef uint8_t  UEFI_UINT8;
-typedef int16_t  UEFI_INT16;
-typedef uint16_t UEFI_UINT16;
-typedef int32_t  UEFI_INT32;
-typedef uint32_t UEFI_UINT32;
-typedef int64_t  UEFI_INT64;
-typedef uint64_t UEFI_UINT64;
-typedef char     UEFI_CHAR8;
-typedef char16_t UEFI_CHAR16;
-typedef void     UEFI_VOID;
-typedEf const    UEFI_CONST;
+/* UEFI Data Types UEFI Specification v2.10 2.3.1 
+typedef uint8_t     UEFI_BOOLEAN;
+typedef int64_t     UEFI_INTN;
+typedef uint64_t    UEFI_UINTN;
+typedef int8_t      UEFI_INT8;
+typedef uint8_t     UEFI_UINT8;
+typedef int16_t     UEFI_INT16;
+typedef uint16_t    UEFI_UINT16;
+typedef int32_t     UEFI_INT32;
+typedef uint32_t    UEFI_UINT32;
+typedef int64_t     UEFI_INT64;
+typedef uint64_t    UEFI_UINT64;
+typedef __int128_t  UEFI_INT128;
+typedef __uint128_t UEFI_UINT128;
+typedef char        UEFI_CHAR8;
+typedef char16_t    UEFI_CHAR16;
+typedef void        UEFI_VOID;
+
+#define UEFI_CONST const
 */
 
 /*UEFI Specification v2.10 Appendix A */
@@ -59,12 +64,38 @@ typedef struct {
 } UEFI_TABLE_HEADER;
 
 // Not yet implemented from the specifications.
-typedef void* UEFI_SIMPLE_TEXT_INPUT_PROTOCOL;
 typedef void* UEFI_RUNTIME_SERVICES;
 typedef void* UEFI_BOOT_SERVICES;
 typedef void* UEFI_CONFIGURATION_TABLE;
 
-// Forward declaration because of circular dependency.
+// Forward declaration because of circular dependencies.
+typedef struct UEFI_SIMPLE_TEXT_INPUT_PROTOCOL UEFI_SIMPLE_TEXT_INPUT_PROTOCOL;
+
+/* UEFI Specification v2.10 12.3.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_INPUT_RESET) (
+    IN UEFI_SIMPLE_TEXT_INPUT_PROTOCOL* This,
+    IN uint8_t                          ExtendedVerification
+);
+
+/* UEFI Specification v2.10 12.3.3 */
+typedef struct {
+    uint16_t ScanCode;
+    char16_t UnicodeChar;
+} UEFI_INPUT_KEY;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_INPUT_READ_KEY) (
+    IN  UEFI_SIMPLE_TEXT_INPUT_PROTOCOL* This,
+    OUT UEFI_INPUT_KEY*                  Key
+);
+
+/* UEFI Specification v2.10 12.3.1 */
+typedef struct UEFI_SIMPLE_TEXT_INPUT_PROTOCOL {
+    UEFI_INPUT_RESET    Reset;
+    UEFI_INPUT_READ_KEY ReadKeyStroke;
+    UEFI_EVENT          WaitForKey;
+} UEFI_SIMPLE_TEXT_INPUT_PROTOCOL;
+
+// Forward declaration because of circular dependencies.
 typedef struct UEFI_SIMPLE_TEXT_OUTPUT_PROTOCOL UEFI_SIMPLE_TEXT_OUTPUT_PROTOCOL;
 
 /* UEFI Specification v2.10 12.4.1 */
@@ -132,10 +163,14 @@ typedef UEFI_STATUS (UEFI_API* UEFI_TEXT_SET_ATTRIBUTE) (
 #define UEFI_FOREGROUND_YELLOW       0x0E
 #define UEFI_FOREGROUND_WHITE        0x0F
 
-#define UEFI_BACKGROUND_BLACK 0x00
-#define UEFI_BACKGROUND_BLUE  0x10
-#define UEFI_BACKGROUND_GREEN 0x20
-#define UEFI_BACKGROUND_CYAN  0x30
+#define UEFI_BACKGROUND_BLACK     0x00
+#define UEFI_BACKGROUND_BLUE      0x10
+#define UEFI_BACKGROUND_GREEN     0x20
+#define UEFI_BACKGROUND_CYAN      0x30
+#define UEFI_BACKGROUND_RED       0x40
+#define UEFI_BACKGROUND_MAGENTA   0x50
+#define UEFI_BACKGROUND_BROWN     0x60
+#define UEFI_BACKGROUND_LIGHTGRAY 0x70
 
 #define UEFI_TEXT_ATTR(Foreground, Background) (Foreground | Background)
 
@@ -195,3 +230,6 @@ typedef UEFI_STATUS (UEFI_API* UEFI_IMAGE_ENTRY_POINT) (
 );
 
 #define UEFI_SUCCESS 0
+
+#endif
+/* END OF UEFI.H */
