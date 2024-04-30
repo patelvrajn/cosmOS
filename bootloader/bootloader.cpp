@@ -15,7 +15,7 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
     SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 
     uint64_t max_cols, max_rows;
-
+    int32_t max_num_of_modes = SystemTable->ConOut->Mode->MaxMode;
     SystemTable->ConOut->QueryMode(SystemTable->ConOut, SystemTable->ConOut->Mode->CurrentMode, &max_cols, &max_rows);
 
     /*Print string.*/
@@ -28,7 +28,7 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
                 u"Cursor Visible: %i\r\n"
                 u"Columns: %i\r\n"
                 u"Rows: %i\r\n",
-                SystemTable->ConOut->Mode->MaxMode,
+                max_num_of_modes,
                 SystemTable->ConOut->Mode->CurrentMode,
                 SystemTable->ConOut->Mode->Attribute,
                 SystemTable->ConOut->Mode->CursorRow,
@@ -37,7 +37,23 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
                 max_cols,
                 max_rows);
 
-    while (1);
+    for (uint64_t idx = 0; idx < (uint64_t)max_num_of_modes; idx++) {
+
+        SystemTable->ConOut->QueryMode(SystemTable->ConOut, idx, &max_cols, &max_rows);
+
+        uefi_printf(SystemTable, u"Text Mode (rows x cols) %i: %ix%i\r\n", idx, max_rows, max_cols);
+
+    }
+
+    char16_t charbuffer[2] = {'\0', '\0'};
+    while (1) {
+
+        UEFI_INPUT_KEY k = uefi_wait_for_keystroke(SystemTable);
+
+        charbuffer[0] = k.UnicodeChar;
+        uefi_printf(SystemTable, u"Scancode : %i ; Char : %s\r\n", k.ScanCode, charbuffer);
+
+    }
 
     return UEFI_SUCCESS;
 

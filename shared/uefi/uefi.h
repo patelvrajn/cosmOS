@@ -65,8 +65,432 @@ typedef struct {
 
 // Not yet implemented from the specifications.
 typedef void* UEFI_RUNTIME_SERVICES;
-typedef void* UEFI_BOOT_SERVICES;
 typedef void* UEFI_CONFIGURATION_TABLE;
+
+/* UEFI Specification v2.10 7.1.1 */
+typedef void (UEFI_API* UEFI_EVENT_NOTIFY) (
+    IN UEFI_EVENT Event,
+    IN void*      Context
+);
+
+typedef UEFI_STATUS (UEFI_API* UEFI_CREATE_EVENT) (
+    IN  uint32_t          Type,
+    IN  UEFI_TPL          NotifyTpl,
+    IN  UEFI_EVENT_NOTIFY NotifyFunction,
+    IN  void*             NotifyContext,
+    OUT UEFI_EVENT*       Event
+);
+
+/* UEFI Specification v2.10 7.1.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_CREATE_EVENT_EX) (
+    IN uint32_t                   Type,
+    IN UEFI_TPL                   NotifyTpl,
+    OPTIONAL IN UEFI_EVENT_NOTIFY NotifyFunction,
+    OPTIONAL IN const void*       NotifyContext,
+    OPTIONAL IN const UEFI_GUID*  EventGroup,
+    OUT UEFI_EVENT*               Event
+);
+
+/* UEFI Specification v2.10 7.1.3 */
+typedef UEFI_STATUS (UEFI_API* UEFI_CLOSE_EVENT) (
+    IN UEFI_EVENT Event
+);
+
+/* UEFI Specification v2.10 7.1.4 */
+typedef UEFI_STATUS (UEFI_API* UEFI_SIGNAL_EVENT) (
+    IN UEFI_EVENT Event
+);
+
+/* UEFI Specification v2.10 7.1.5 */
+typedef UEFI_STATUS (UEFI_API* UEFI_WAIT_FOR_EVENT) (
+    IN uint64_t    NumberOfEvents,
+    IN UEFI_EVENT* Event,
+    OUT uint64_t*  Index
+);
+
+/* UEFI Specification v2.10 7.1.6 */
+typedef UEFI_STATUS (UEFI_API* UEFI_CHECK_EVENT) (
+    IN UEFI_EVENT Event
+);
+
+/* UEFI Specification v2.10 7.1.7 */
+typedef enum {
+    TimerCancel,
+    TimerPeriodic,
+    TimerRelative
+} UEFI_TIMER_DELAY;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_SET_TIMER) (
+    IN UEFI_EVENT       Event,
+    IN UEFI_TIMER_DELAY Type,
+    IN uint64_t         TriggerTime
+);
+
+/* UEFI Specification v2.10 7.1.8 */
+typedef UEFI_TPL (UEFI_API* UEFI_RAISE_TPL) (
+    IN UEFI_TPL NewTpl
+);
+
+/* UEFI Specification v2.10 7.1.9 */
+typedef void (UEFI_API* UEFI_RESTORE_TPL) (
+    IN UEFI_TPL OldTpl
+);
+
+/* UEFI Specification v2.10 7.2.1 */
+typedef enum {
+    AllocateAnyPages,
+    AllocateMaxAddress,
+    AllocateAddress,
+    MaxAllocateType
+} UEFI_ALLOCATE_TYPE;
+
+typedef enum {
+    UefiReservedMemoryType,
+    UefiLoaderCode,
+    UefiLoaderData,
+    UefiBootServicesCode,
+    UefiBootServicesData,
+    UefiRuntimeServicesCode,
+    UefiRuntimeServicesData,
+    UefiConventionalMemory,
+    UefiUnusableMemory,
+    UefiACPIReclaimMemory,
+    UefiACPIMemoryNVS,
+    UefiMemoryMappedIO,
+    UefiMemoryMappedIOPortSpace,
+    UefiPalCode,
+    UefiPersistentMemory,
+    UefiUnacceptedMemoryType,
+    UefiMaxMemoryType
+} UEFI_MEMORY_TYPE;
+
+typedef uint64_t UEFI_PHYSICAL_ADDRESS;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_ALLOCATE_PAGES) (
+    IN UEFI_ALLOCATE_TYPE         Type,
+    IN UEFI_MEMORY_TYPE           MemoryType,
+    IN uint64_t                   Pages,
+    IN OUT UEFI_PHYSICAL_ADDRESS* Memory
+);
+
+/* UEFI Specification v2.10 7.2.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FREE_PAGES) (
+    IN UEFI_PHYSICAL_ADDRESS Memory,
+    IN uint64_t              Pages
+);
+
+/* UEFI Specification v2.10 7.2.3 */
+typedef uint64_t UEFI_VIRTUAL_ADDRESS;
+
+typedef struct {
+    uint32_t              Type;
+    UEFI_PHYSICAL_ADDRESS PhysicalStart;
+    UEFI_VIRTUAL_ADDRESS  VirtualStart;
+    uint64_t              NumberOfPages;
+    uint64_t              Attribute;
+} UEFI_MEMORY_DESCRIPTOR;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_GET_MEMORY_MAP) (
+    IN OUT uint64_t* MemoryMapSize,
+    OUT UEFI_MEMORY_DESCRIPTOR* MemoryMap,
+    OUT uint64_t* MapKey,
+    OUT uint64_t* DescriptorSize,
+    OUT uint32_t* DescriptorVersion
+);
+
+/* UEFI Specification v2.10 7.2.4 */
+typedef UEFI_STATUS (UEFI_API* UEFI_ALLOCATE_POOL) (
+    IN UEFI_MEMORY_TYPE PoolType,
+    IN uint64_t Size,
+    OUT void** Buffer
+);
+
+/* UEFI Specification v2.10 7.2.5 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FREE_POOL) (
+    IN void* Buffer
+);
+
+/* UEFI Specification v2.10 7.3.2 */
+typedef enum {
+    UEFI_NATIVE_INTERFACE
+} UEFI_INTERFACE_TYPE;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_INSTALL_PROTOCOL_INTERFACE) (
+    IN OUT UEFI_HANDLE*    Handle,
+    IN UEFI_GUID*          Protocol,
+    IN UEFI_INTERFACE_TYPE InterfaceType,
+    IN void*               Interface
+);
+
+/* UEFI Specification v2.10 7.3.3 */
+typedef UEFI_STATUS (UEFI_API* UEFI_UNINSTALL_PROTOCOL_INTERFACE) (
+    IN UEFI_HANDLE Handle,
+    IN UEFI_GUID*  Protocol,
+    IN void*       Interface
+);
+
+/* UEFI Specification v2.10 7.3.4 */
+typedef UEFI_STATUS (UEFI_API* UEFI_REINSTALL_PROTOCOL_INTERFACE) (
+    IN UEFI_HANDLE Handle,
+    IN UEFI_GUID*  Protocol,
+    IN void*       OldInterface,
+    IN void*       NewInterface
+);
+
+/* UEFI Specification v2.10 7.3.5 */
+typedef UEFI_STATUS (UEFI_API* UEFI_REGISTER_PROTOCOL_NOTIFY) (
+    IN UEFI_GUID* Protocol,
+    IN UEFI_EVENT Event,
+    OUT void**    Registration
+);
+
+/* UEFI Specification v2.10 7.3.6 */
+typedef enum {
+    AllHandles,
+    ByRegisterNotify,
+    ByProtocol
+} UEFI_LOCATE_SEARCH_TYPE;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_LOCATE_HANDLE) (
+    IN UEFI_LOCATE_SEARCH_TYPE SearchType,
+    OPTIONAL IN UEFI_GUID*     Protocol,
+    OPTIONAL IN void*          SearchKey,
+    IN OUT uint64_t*           BufferSize,
+    OUT UEFI_HANDLE*           Buffer
+);
+
+/* UEFI Specification v2.10 7.3.7 */
+typedef UEFI_STATUS (UEFI_API* UEFI_HANDLE_PROTOCOL) (
+    IN UEFI_HANDLE Handle,
+    IN UEFI_GUID   Protocol,
+    OUT void**     Interface
+);
+
+/* UEFI Specification v2.10 10.2 */
+typedef struct {
+    uint8_t Type;
+    uint8_t SubType;
+    uint8_t Length[2];
+} UEFI_DEVICE_PATH_PROTOCOL;
+
+/* UEFI Specification v2.10 7.3.8 */
+typedef UEFI_STATUS (UEFI_API* UEFI_LOCATE_DEVICE_PATH) (
+    IN UEFI_GUID*                      Protocol,
+    IN OUT UEFI_DEVICE_PATH_PROTOCOL** DevicePath,
+    OUT UEFI_HANDLE*                   Device
+);
+
+/* UEFI Specification v2.10 7.3.9 */
+typedef UEFI_STATUS (UEFI_API* UEFI_OPEN_PROTOCOL) (
+    IN UEFI_HANDLE      Handle,
+    IN UEFI_GUID*       Protocol,
+    OPTIONAL OUT void** Interface,
+    IN UEFI_HANDLE      AgentHandle,
+    IN UEFI_HANDLE      ControllerHandle,
+    IN uint32_t         Attributes
+);
+
+/* UEFI Specification v2.10 7.3.10 */
+typedef UEFI_STATUS (UEFI_API* UEFI_CLOSE_PROTOCOL) (
+    IN UEFI_HANDLE Handle,
+    IN UEFI_GUID*  Protocol,
+    IN UEFI_HANDLE AgentHandle,
+    IN UEFI_HANDLE ControllerHandle
+);
+
+/* UEFI Specification v2.10 7.3.11 */
+typedef struct {
+    UEFI_HANDLE AgentHandle;
+    UEFI_HANDLE ControllerHandle;
+    uint32_t    Attributes;
+    uint32_t    OpenCount;
+} UEFI_OPEN_PROTOCOL_INFORMATION_ENTRY;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_OPEN_PROTOCOL_INFORMATION) (
+    IN  UEFI_HANDLE                            Handle,
+    IN  UEFI_GUID*                             Protocol,
+    OUT UEFI_OPEN_PROTOCOL_INFORMATION_ENTRY** EntryBuffer,
+    OUT uint64_t*                              EntryCount
+);
+
+/* UEFI Specification v2.10 7.3.12 */
+typedef UEFI_STATUS (UEFI_API* UEFI_CONNECT_CONTROLLER) (
+    IN UEFI_HANDLE                         ControllerHandle,
+    OPTIONAL IN UEFI_HANDLE*               DriverImageHandle,
+    OPTIONAL IN UEFI_DEVICE_PATH_PROTOCOL* RemainingDevicePath,
+    IN uint8_t                             Recursive
+);
+
+/* UEFI Specification v2.10 7.3.13 */
+typedef UEFI_STATUS (UEFI_API* UEFI_DISCONNECT_CONTROLLER) (
+    IN UEFI_HANDLE          ControllerHandle,
+    OPTIONAL IN UEFI_HANDLE DriverImageHandle,
+    OPTIONAL IN UEFI_HANDLE ChildHandle
+);
+
+/* UEFI Specification v2.10 7.3.14 */
+typedef UEFI_STATUS (UEFI_API* UEFI_PROTOCOLS_PER_HANDLE) (
+    IN UEFI_HANDLE   Handle,
+    OUT UEFI_GUID*** ProtocolBuffer,
+    OUT uint64_t*    ProtocolBufferCount
+);
+
+/* UEFI Specification v2.10 7.3.15 */
+typedef UEFI_STATUS (UEFI_API *UEFI_LOCATE_HANDLE_BUFFER) (
+    IN UEFI_LOCATE_SEARCH_TYPE SearchType,
+    OPTIONAL IN UEFI_GUID*     Protocol,
+    OPTIONAL IN void*          SearchKey,
+    OUT uint64_t*              NoHandles,
+    OUT UEFI_HANDLE**          Buffer
+);
+
+/* UEFI Specification v2.10 7.3.16 */
+typedef UEFI_STATUS (UEFI_API* UEFI_LOCATE_PROTOCOL) (
+    IN UEFI_GUID*     Protocol,
+    OPTIONAL IN void* Registration,
+    OUT void**        Interface
+);
+
+/* UEFI Specification v2.10 7.3.17 */
+typedef UEFI_STATUS (UEFI_API* UEFI_INSTALL_MULTIPLE_PROTOCOL_INTERFACES) (
+    IN OUT UEFI_HANDLE *Handle,
+    ...
+);
+
+/* UEFI Specification v2.10 7.3.18 */
+typedef UEFI_STATUS (UEFI_API* UEFI_UNINSTALL_MULTIPLE_PROTOCOL_INTERFACES) (
+    IN UEFI_HANDLE Handle,
+    ...
+);
+
+/* UEFI Specification v2.10 7.4.1 */
+typedef UEFI_STATUS (UEFI_API* UEFI_IMAGE_LOAD) (
+    IN uint8_t                             BootPolicy,
+    IN UEFI_HANDLE                         ParentImageHandle,
+    OPTIONAL IN UEFI_DEVICE_PATH_PROTOCOL* DevicePath,
+    OPTIONAL IN void*                      SourceBuffer,
+    IN uint64_t                            SourceSize,
+    OUT UEFI_HANDLE*                       ImageHandle
+);
+
+/* UEFI Specification v2.10 7.4.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_IMAGE_START) (
+    IN UEFI_HANDLE          ImageHandle,
+    OUT uint64_t*           ExitDataSize,   
+    OPTIONAL OUT char16_t** ExitData 
+);
+
+/* UEFI Specification v2.10 7.4.3 */
+typedef UEFI_STATUS (UEFI_API* UEFI_IMAGE_UNLOAD) (
+    IN UEFI_HANDLE ImageHandle
+);
+
+/* UEFI Specification v2.10 7.4.5 */
+typedef UEFI_STATUS (UEFI_API* UEFI_EXIT) (
+    IN UEFI_HANDLE        ImageHandle,
+    IN UEFI_STATUS        ExitStatus,
+    IN uint64_t           ExitDataSize,
+    OPTIONAL IN char16_t* ExitData
+);
+
+/* UEFI Specification v2.10 7.4.6 */
+typedef UEFI_STATUS (UEFI_API* UEFI_EXIT_BOOT_SERVICES) (
+    IN UEFI_HANDLE ImageHandle,
+    IN uint64_t    MapKey
+);
+
+/* UEFI Specification v2.10 7.5.1 */
+typedef UEFI_STATUS (UEFI_API* UEFI_SET_WATCHDOG_TIMER) (
+    IN uint64_t           Timeout,
+    IN uint64_t           WatchdogCode,
+    IN uint64_t           DataSize,
+    OPTIONAL IN char16_t* WatchdogData
+);
+
+/* UEFI Specification v2.10 7.5.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_STALL) (
+    IN uint64_t Microseconds
+);
+
+/* UEFI Specification v2.10 7.5.3 */
+typedef void (UEFI_API* UEFI_COPY_MEM) (
+    IN void*    Destination,
+    IN void*    Source,
+    IN uint64_t Length
+);
+
+/* UEFI Specification v2.10 7.5.4 */
+typedef void (UEFI_API* UEFI_SET_MEM) (
+    IN void*    Buffer,
+    IN uint64_t Size,
+    IN uint8_t  Value
+);
+
+/* UEFI Specification v2.10 7.5.5 */
+typedef UEFI_STATUS (UEFI_API* UEFI_GET_NEXT_MONOTONIC_COUNT) (
+    OUT uint64_t* Count
+);
+
+/* UEFI Specification v2.10 7.5.6 */
+typedef UEFI_STATUS (UEFI_API* UEFI_INSTALL_CONFIGURATION_TABLE) (
+    IN UEFI_GUID* Guid,
+    IN void*      Table
+);
+
+/* UEFI Specification v2.10 7.5.7 */
+typedef UEFI_STATUS (UEFI_API* UEFI_CALCULATE_CRC32) (
+    IN  void*     Data,
+    IN  uint64_t  DataSize,
+    OUT uint32_t* Crc32
+);
+
+/* UEFI Specification v2.10 4.4.1 */
+typedef struct {
+    UEFI_TABLE_HEADER                           Hdr;
+    UEFI_RAISE_TPL                              RaiseTPL;
+    UEFI_RESTORE_TPL                            RestoreTPL;
+    UEFI_ALLOCATE_PAGES                         AllocatePages;
+    UEFI_FREE_PAGES                             FreePages;
+    UEFI_GET_MEMORY_MAP                         GetMemoryMap;
+    UEFI_ALLOCATE_POOL                          AllocatePool;
+    UEFI_FREE_POOL                              FreePool;
+    UEFI_CREATE_EVENT                           CreateEvent;
+    UEFI_SET_TIMER                              SetTimer;
+    UEFI_WAIT_FOR_EVENT                         WaitForEvent;
+    UEFI_SIGNAL_EVENT                           SignalEvent;
+    UEFI_CLOSE_EVENT                            CloseEvent;
+    UEFI_CHECK_EVENT                            CheckEvent;
+    UEFI_INSTALL_PROTOCOL_INTERFACE             InstallProtocolInterface;
+    UEFI_REINSTALL_PROTOCOL_INTERFACE           ReinstallProtocolInterface;
+    UEFI_UNINSTALL_PROTOCOL_INTERFACE           UninstallProtocolInterface;
+    UEFI_HANDLE_PROTOCOL                        HandleProtocol;
+    UEFI_REGISTER_PROTOCOL_NOTIFY               RegisterProtocolNotify;
+    UEFI_LOCATE_HANDLE                          LocateHandle;
+    UEFI_LOCATE_DEVICE_PATH                     LocateDevicePath;
+    UEFI_INSTALL_CONFIGURATION_TABLE            InstallConfigurationTable;
+    UEFI_IMAGE_LOAD                             LoadImage;
+    UEFI_IMAGE_START                            StartImage;
+    UEFI_EXIT                                   Exit;
+    UEFI_IMAGE_UNLOAD                           UnloadImage;
+    UEFI_EXIT_BOOT_SERVICES                     ExitBootServices;
+    UEFI_GET_NEXT_MONOTONIC_COUNT               GetNextMonotonicCount;
+    UEFI_STALL                                  Stall;
+    UEFI_SET_WATCHDOG_TIMER                     SetWatchdogTimer;
+    UEFI_CONNECT_CONTROLLER                     ConnectController;
+    UEFI_DISCONNECT_CONTROLLER                  DisconnectController;
+    UEFI_OPEN_PROTOCOL                          OpenProtocol;
+    UEFI_CLOSE_PROTOCOL                         CloseProtocol;
+    UEFI_OPEN_PROTOCOL_INFORMATION              OpenProtocolInformation;
+    UEFI_PROTOCOLS_PER_HANDLE                   ProtocolsPerHandle;
+    UEFI_LOCATE_HANDLE_BUFFER                   LocateHandleBuffer;
+    UEFI_LOCATE_PROTOCOL                        LocateProtocol;
+    UEFI_INSTALL_MULTIPLE_PROTOCOL_INTERFACES   InstallMultipleProtocolInterfaces;
+    UEFI_UNINSTALL_MULTIPLE_PROTOCOL_INTERFACES UninstallMultipleProtocolInterfaces;
+    UEFI_CALCULATE_CRC32                        CalculateCrc32;
+    UEFI_COPY_MEM                               CopyMem;
+    UEFI_SET_MEM                                SetMem;
+    UEFI_CREATE_EVENT_EX                        CreateEventEx;        
+} UEFI_BOOT_SERVICES;
 
 // Forward declaration because of circular dependencies.
 typedef struct UEFI_SIMPLE_TEXT_INPUT_PROTOCOL UEFI_SIMPLE_TEXT_INPUT_PROTOCOL;

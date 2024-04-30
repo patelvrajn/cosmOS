@@ -9,7 +9,7 @@ void uefi_print_number (UEFI_SYSTEM_TABLE* SystemTable, int32_t number, int32_t 
     char16_t* digits = u"0123456789ABCDEF";
 
     /*INT32 ranges from -2,147,483,648 to 2,147,483,647 so 10 digits + sign + null character */
-    const uint32_t BUFFER_SIZE = 12;
+    const uint32_t BUFFER_SIZE = 12; // TODO: May not be large enough for all use cases!!!
     char16_t charbuffer[BUFFER_SIZE];
 
     uint32_t i;
@@ -93,4 +93,23 @@ void uefi_printf (UEFI_SYSTEM_TABLE* SystemTable, char16_t* unformatted_string, 
 
     va_end (v_args);
 
+}
+
+UEFI_INPUT_KEY uefi_wait_for_keystroke (UEFI_SYSTEM_TABLE* SystemTable) {
+    
+    const uint64_t NUM_OF_EVENTS = 1;
+    UEFI_EVENT event[NUM_OF_EVENTS];
+    UEFI_INPUT_KEY k;
+    uint64_t idx;
+
+    /*Add wait for key to event array.*/
+    event[0] = SystemTable->ConIn->WaitForKey;
+
+    /*Halts execution and waits for the singular keystroke event.*/
+    SystemTable->BootServices->WaitForEvent(NUM_OF_EVENTS, event, &idx);
+
+    /*Read keystroke.*/
+    SystemTable->ConIn->ReadKeyStroke(SystemTable->ConIn, &k);
+
+    return k;
 }
