@@ -1,7 +1,7 @@
 #include "../shared/uefi/uefi.h"
 #include "../shared/uefi/uefi_console.h"
 
-extern "C" {
+extern "C" { // Avoids name mangling of the UEFI entry point.
 UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
 
     /* Reset Console Device, clear screen to background color, and set cursor
@@ -11,50 +11,77 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
     /*Set background and foreground colors.*/
     SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(UEFI_FOREGROUND_BLUE, UEFI_BACKGROUND_CYAN));
 
-    /*Clear screen to background color, and set cursor to (0,0)*/
-    SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
+    bool running = true;
+    while (running) {
+        /*Clear screen to background color, and set cursor to (0,0)*/
+        SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 
-    uint64_t max_cols, max_rows;
-    int32_t max_num_of_modes = SystemTable->ConOut->Mode->MaxMode;
-    SystemTable->ConOut->QueryMode(SystemTable->ConOut, SystemTable->ConOut->Mode->CurrentMode, &max_cols, &max_rows);
+        static int64_t selected_text_mode = 0;
+        selected_text_mode = SystemTable->ConOut->Mode->CurrentMode;
 
-    /*Print string.*/
-    uefi_printf(SystemTable, u"Current Text Mode:\r\n"
-                u"Max Mode: %i\r\n"
-                u"Current Mode: %i\r\n"
-                u"Attribute: %i\r\n"
-                u"Cursor Row: %i\r\n"
-                u"Cursor Column: %i\r\n"
-                u"Cursor Visible: %i\r\n"
-                u"Columns: %i\r\n"
-                u"Rows: %i\r\n",
-                max_num_of_modes,
-                SystemTable->ConOut->Mode->CurrentMode,
-                SystemTable->ConOut->Mode->Attribute,
-                SystemTable->ConOut->Mode->CursorRow,
-                SystemTable->ConOut->Mode->CursorColumn,
-                SystemTable->ConOut->Mode->CursorVisible,
-                max_cols,
-                max_rows);
+        /*Query the selected text mode for num of rows and cols.*/
+        uint64_t max_cols, max_rows;
+        int32_t max_num_of_modes = SystemTable->ConOut->Mode->MaxMode;
+        SystemTable->ConOut->QueryMode(SystemTable->ConOut, selected_text_mode, &max_cols, &max_rows);
 
-    for (uint64_t idx = 0; idx < (uint64_t)max_num_of_modes; idx++) {
+        /*Print string.*/
+        uefi_printf(SystemTable, u"Current Text Mode:\r\n"
+                    u"Max Mode: %i\r\n"
+                    u"Current Mode: %i\r\n"
+                    u"Attribute: %i\r\n"
+                    u"Cursor Row: %i\r\n"
+                    u"Cursor Column: %i\r\n"
+                    u"Cursor Visible: %i\r\n"
+                    u"Columns: %i\r\n"
+                    u"Rows: %i\r\n",
+                    max_num_of_modes,
+                    SystemTable->ConOut->Mode->CurrentMode,
+                    SystemTable->ConOut->Mode->Attribute,
+                    SystemTable->ConOut->Mode->CursorRow,
+                    SystemTable->ConOut->Mode->CursorColumn,
+                    SystemTable->ConOut->Mode->CursorVisible,
+                    max_cols,
+                    max_rows);
 
-        SystemTable->ConOut->QueryMode(SystemTable->ConOut, idx, &max_cols, &max_rows);
+        for (uint64_t idx = 0; idx < (uint64_t)max_num_of_modes; idx++) {
 
-        uefi_printf(SystemTable, u"Text Mode (rows x cols) %i: %ix%i\r\n", idx, max_rows, max_cols);
+            SystemTable->ConOut->QueryMode(SystemTable->ConOut, idx, &max_cols, &max_rows);
 
+            uefi_printf(SystemTable, u"Text Mode (rows x cols) %i: %ix%i\r\n", idx, max_rows, max_cols);
+
+        }
+
+        char16_t charbuffer[2] = {'\0', '\0'};
+        while (1) {
+
+            // Wait for user to press a key choosing a valid text mode.
+            uefi_printf(SystemTable, u"Select text mode (0-%i)", (max_num_of_modes - 1));
+            UEFI_INPUT_KEY k = uefi_wait_for_keystroke(SystemTable);
+
+            // Store character of key pressed, if any.
+            charbuffer[0] = k.UnicodeChar;
+
+            // Note: logic only works for less than 10 selected text modes as only 1 key press is buffered.
+            selected_text_mode = k.UnicodeChar - u'0';
+            if (selected_text_mode >= 0 && selected_text_mode < max_num_of_modes) {
+                
+                // Set text mode to mode requested by user. 
+                UEFI_STATUS status = SystemTable->ConOut->SetMode(SystemTable->ConOut, selected_text_mode);
+
+                // Check for error.
+                if(UEFI_IS_ERROR(status)) {
+                    uefi_printf(SystemTable, u"\r\nUEFI ERROR %i while selecting text mode.\r\n", status);    
+                } else {
+                    break; // Sucessfully set new text mode, redraw screen.
+                }
+
+            } else {
+                // Did not get a valid key press corresponding to a number within range or a number.
+                uefi_printf(SystemTable, u"\r\nRecived Scancode : %i ; Char : %s. Invalid text mode.\r\n", k.ScanCode, charbuffer);
+            }
+        }    
     }
-
-    char16_t charbuffer[2] = {'\0', '\0'};
-    while (1) {
-
-        UEFI_INPUT_KEY k = uefi_wait_for_keystroke(SystemTable);
-
-        charbuffer[0] = k.UnicodeChar;
-        uefi_printf(SystemTable, u"Scancode : %i ; Char : %s\r\n", k.ScanCode, charbuffer);
-
-    }
-
+    
     return UEFI_SUCCESS;
 
 }}
