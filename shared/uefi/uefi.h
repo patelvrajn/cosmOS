@@ -510,7 +510,7 @@ typedef UEFI_STATUS (UEFI_API* UEFI_SET_VARIABLE) (
     IN UEFI_GUID* VendorGuid,
     IN uint32_t   Attributes,
     IN uint64_t   DataSize,
-    IN void*      Data,
+    IN void*      Data
 );
 
 /* UEFI Specification v2.10 8.2.4 */
@@ -581,10 +581,10 @@ typedef UEFI_STATUS (UEFI_API* UEFI_CONVERT_POINTER) (
 
 /* UEFI Specification v2.10 8.5.1.1 */
 typedef enum {
-    EfiResetCold,
-    EfiResetWarm,
-    EfiResetShutdown,
-    EfiResetPlatformSpecific
+    UefiResetCold,
+    UefiResetWarm,
+    UefiResetShutdown,
+    UefiResetPlatformSpecific
 } UEFI_RESET_TYPE;
 
 typedef void (UEFI_API* UEFI_RESET_SYSTEM) (

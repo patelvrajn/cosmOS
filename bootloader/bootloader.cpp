@@ -1,5 +1,6 @@
 #include "../shared/uefi/uefi.h"
 #include "../shared/uefi/uefi_console.h"
+#include <stddef.h>
 
 extern "C" { // Avoids name mangling of the UEFI entry point.
 UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
@@ -13,6 +14,7 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
 
     bool running = true;
     while (running) {
+
         /*Clear screen to background color, and set cursor to (0,0)*/
         SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 
@@ -51,6 +53,7 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
 
         }
 
+        static const uint16_t ESC_SCANCODE = 23;
         char16_t charbuffer[2] = {'\0', '\0'};
         while (1) {
 
@@ -72,9 +75,11 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
                 if(UEFI_IS_ERROR(status)) {
                     uefi_printf(SystemTable, u"\r\nUEFI ERROR %i while selecting text mode.\r\n", status);    
                 } else {
-                    break; // Sucessfully set new text mode, redraw screen.
+                    break; // Successfully set new text mode, redraw screen.
                 }
 
+            } else if (k.ScanCode == ESC_SCANCODE) {
+                SystemTable->RuntimeServices->ResetSystem(UefiResetShutdown, UEFI_SUCCESS, 0, NULL);
             } else {
                 // Did not get a valid key press corresponding to a number within range or a number.
                 uefi_printf(SystemTable, u"\r\nRecived Scancode : %i ; Char : %s. Invalid text mode.\r\n", k.ScanCode, charbuffer);
