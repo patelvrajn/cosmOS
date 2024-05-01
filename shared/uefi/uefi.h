@@ -63,10 +63,6 @@ typedef struct {
     uint32_t Reserved;
 } UEFI_TABLE_HEADER;
 
-// Not yet implemented from the specifications.
-typedef void* UEFI_RUNTIME_SERVICES;
-typedef void* UEFI_CONFIGURATION_TABLE;
-
 /* UEFI Specification v2.10 7.1.1 */
 typedef void (UEFI_API* UEFI_EVENT_NOTIFY) (
     IN UEFI_EVENT Event,
@@ -491,6 +487,164 @@ typedef struct {
     UEFI_SET_MEM                                SetMem;
     UEFI_CREATE_EVENT_EX                        CreateEventEx;        
 } UEFI_BOOT_SERVICES;
+
+/* UEFI Specification v2.10 8.2.1 */
+typedef UEFI_STATUS (UEFI_API* UEFI_GET_VARIABLE) (
+    IN char16_t*           VariableName,
+    IN UEFI_GUID*          VendorGuid,
+    OPTIONAL OUT uint32_t* Attributes,
+    IN OUT uint64_t*       DataSize,
+    OPTIONAL OUT void*     Data
+);
+
+/* UEFI Specification v2.10 8.2.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_GET_NEXT_VARIABLE_NAME) (
+    IN OUT uint64_t*  VariableNameSize,
+    IN OUT char16_t*  VariableName,
+    IN OUT UEFI_GUID* VendorGuid
+);
+
+/* UEFI Specification v2.10 8.2.3 */
+typedef UEFI_STATUS (UEFI_API* UEFI_SET_VARIABLE) (
+    IN char16_t*  VariableName,
+    IN UEFI_GUID* VendorGuid,
+    IN uint32_t   Attributes,
+    IN uint64_t   DataSize,
+    IN void*      Data,
+);
+
+/* UEFI Specification v2.10 8.2.4 */
+typedef UEFI_STATUS (UEFI_API* UEFI_QUERY_VARIABLE_INFO) (
+    IN  uint32_t  Attributes,
+    OUT uint64_t* MaximumVariableStorageSize,
+    OUT uint64_t* RemainingVariableStorageSize,
+    OUT uint64_t* MaximumVariableSize
+);
+
+/* UEFI Specification v2.10 8.3.1 */
+typedef struct {
+    uint32_t Resolution;
+    uint32_t Accuracy;
+    uint8_t  SetsToZero;
+} UEFI_TIME_CAPABILITIES;
+
+typedef struct {
+    uint16_t Year;
+    uint8_t  Month;
+    uint8_t  Day;
+    uint8_t  Hour;
+    uint8_t  Minute;
+    uint8_t  Second;
+    uint8_t  Pad1;
+    uint32_t Nanosecond;
+    int16_t  TimeZone; 
+    uint8_t  Daylight;
+    uint8_t  Pad2;
+} UEFI_TIME;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_GET_TIME) (
+    OUT UEFI_TIME*              Time,
+    OUT UEFI_TIME_CAPABILITIES* Capabilities
+);
+
+/* UEFI Specification v2.10 8.3.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_SET_TIME) (
+    IN UEFI_TIME* Time
+);
+
+/* UEFI Specification v2.10 8.3.3 */
+typedef UEFI_STATUS (UEFI_API* UEFI_GET_WAKEUP_TIME) (
+    OUT uint8_t*   Enabled,
+    OUT uint8_t*   Pending,
+    OUT UEFI_TIME* Time
+);
+
+/* UEFI Specification v2.10 8.3.4 */
+typedef UEFI_STATUS (UEFI_API* UEFI_SET_WAKEUP_TIME) (
+    IN uint8_t             Enable,
+    OPTIONAL IN UEFI_TIME* Time
+);
+
+/* UEFI Specification v2.10 8.4.1 */
+typedef UEFI_STATUS (UEFI_API* UEFI_SET_VIRTUAL_ADDRESS_MAP) (
+    IN uint64_t                MemoryMapSize,
+    IN uint64_t                DescriptorSize,
+    IN uint32_t                DescriptorVersion,
+    IN UEFI_MEMORY_DESCRIPTOR* VirtualMap
+);
+
+/* UEFI Specification v2.10 8.4.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_CONVERT_POINTER) (
+    IN uint64_t DebugDisposition,
+    IN void**   Address
+);
+
+/* UEFI Specification v2.10 8.5.1.1 */
+typedef enum {
+    EfiResetCold,
+    EfiResetWarm,
+    EfiResetShutdown,
+    EfiResetPlatformSpecific
+} UEFI_RESET_TYPE;
+
+typedef void (UEFI_API* UEFI_RESET_SYSTEM) (
+    IN UEFI_RESET_TYPE ResetType,
+    IN UEFI_STATUS     ResetStatus,
+    IN uint64_t        DataSize,
+    OPTIONAL IN void*  ResetData 
+);
+
+/* UEFI Specification v2.10 8.5.2.1 */
+typedef UEFI_STATUS (UEFI_API* UEFI_GET_NEXT_HIGH_MONO_COUNT) (
+    OUT uint32_t* HighCount
+);
+
+/* UEFI Specification v2.10 8.5.3.1 */
+typedef struct {
+    UEFI_GUID CapsuleGuid;
+    uint32_t  HeaderSize;
+    uint32_t  Flags;
+    uint32_t  CapsuleImageSize;
+} UEFI_CAPSULE_HEADER;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_UPDATE_CAPSULE) (
+    IN UEFI_CAPSULE_HEADER**          CapsuleHeaderArray,
+    IN uint64_t                       CapsuleCount,
+    OPTIONAL IN UEFI_PHYSICAL_ADDRESS ScatterGatherList
+);
+
+/* UEFI Specification v2.10 8.5.3.4 */
+typedef UEFI_STATUS (UEFI_API* UEFI_QUERY_CAPSULE_CAPABILITIES) (
+    IN  UEFI_CAPSULE_HEADER** CapsuleHeaderArray, 
+    IN  uint64_t              CapsuleCount,
+    OUT uint64_t*             MaximumCapsuleSize,
+    OUT UEFI_RESET_TYPE*      ResetType
+);
+
+/* UEFI Specification v2.10 4.5.1 */
+typedef struct {
+    UEFI_TABLE_HEADER               Hdr;
+    UEFI_GET_TIME                   GetTime;
+    UEFI_SET_TIME                   SetTime;
+    UEFI_GET_WAKEUP_TIME            GetWakeupTime;
+    UEFI_SET_WAKEUP_TIME            SetWakeupTime;
+    UEFI_SET_VIRTUAL_ADDRESS_MAP    SetVirtualAddressMap;
+    UEFI_CONVERT_POINTER            ConvertPointer;
+    UEFI_GET_VARIABLE               GetVariable;
+    UEFI_GET_NEXT_VARIABLE_NAME     GetNextVariableName;
+    UEFI_SET_VARIABLE               SetVariable;
+    UEFI_GET_NEXT_HIGH_MONO_COUNT   GetNextHighMonotonicCount;
+    UEFI_RESET_SYSTEM               ResetSystem;
+    UEFI_UPDATE_CAPSULE             UpdateCapsule;
+    UEFI_QUERY_CAPSULE_CAPABILITIES QueryCapsuleCapabilities;
+    UEFI_QUERY_VARIABLE_INFO        QueryVariableInfo;
+} UEFI_RUNTIME_SERVICES;
+
+/* UEFI Specification v2.10 4.6.1 */
+typedef struct{
+    UEFI_GUID VendorGuid;
+    void*     VendorTable;
+} UEFI_CONFIGURATION_TABLE;
 
 // Forward declaration because of circular dependencies.
 typedef struct UEFI_SIMPLE_TEXT_INPUT_PROTOCOL UEFI_SIMPLE_TEXT_INPUT_PROTOCOL;
