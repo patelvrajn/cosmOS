@@ -2,18 +2,17 @@
 #include "../shared/uefi/uefi_console.h"
 #include <stddef.h>
 
-extern "C" { // Avoids name mangling of the UEFI entry point.
-UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
+#define DEFAULT_FOREGROUND_COLOR   UEFI_FOREGROUND_BLUE
+#define DEFAULT_BACKGROUND_COLOR   UEFI_BACKGROUND_CYAN
+#define HIGHLIGHT_FOREGROUND_COLOR UEFI_FOREGROUND_YELLOW
+#define HIGHLIGHT_BACKGROUND_COLOR UEFI_BACKGROUND_BLACK
 
-    /* Reset Console Device, clear screen to background color, and set cursor
-    to (0,0) */
-    SystemTable->ConOut->Reset(SystemTable->ConOut, false);
+void set_text_mode (UEFI_SYSTEM_TABLE* SystemTable) {
 
     /*Set background and foreground colors.*/
-    SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(UEFI_FOREGROUND_BLUE, UEFI_BACKGROUND_CYAN));
+    SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
 
-    bool running = true;
-    while (running) {
+    while (true) {
 
         /*Clear screen to background color, and set cursor to (0,0)*/
         SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
@@ -55,7 +54,7 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
 
         static const uint16_t ESC_SCANCODE = 23;
         char16_t charbuffer[2] = {'\0', '\0'};
-        while (1) {
+        while (true) {
 
             // Wait for user to press a key choosing a valid text mode.
             uefi_printf(SystemTable, u"Select text mode (0-%i)", (max_num_of_modes - 1));
@@ -86,7 +85,19 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
             }
         }    
     }
+}
+
+extern "C" { // Avoids name mangling of the UEFI entry point.
+UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
+
+    /* Reset Console Device, clear screen to background color, and set cursor
+    to (0,0) */
+    SystemTable->ConOut->Reset(SystemTable->ConOut, false);
     
+    // set_text_mode(SystemTable);
+
+
+
     return UEFI_SUCCESS;
 
 }}
