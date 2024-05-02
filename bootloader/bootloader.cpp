@@ -1,13 +1,17 @@
 #include "../shared/uefi/uefi.h"
 #include "../shared/uefi/uefi_console.h"
+#include "../shared/data_structures/array.h"
 #include <stddef.h>
 
+#define UP_ARROW_SCANCODE          1
+#define DOWN_ARROW_SCANCODE        2
+#define ESC_SCANCODE               23
 #define DEFAULT_FOREGROUND_COLOR   UEFI_FOREGROUND_BLUE
 #define DEFAULT_BACKGROUND_COLOR   UEFI_BACKGROUND_CYAN
 #define HIGHLIGHT_FOREGROUND_COLOR UEFI_FOREGROUND_YELLOW
 #define HIGHLIGHT_BACKGROUND_COLOR UEFI_BACKGROUND_BLACK
 
-void set_text_mode (UEFI_SYSTEM_TABLE* SystemTable) {
+UEFI_STATUS set_text_mode (UEFI_SYSTEM_TABLE* SystemTable) {
 
     /*Set background and foreground colors.*/
     SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
@@ -52,7 +56,6 @@ void set_text_mode (UEFI_SYSTEM_TABLE* SystemTable) {
 
         }
 
-        static const uint16_t ESC_SCANCODE = 23;
         char16_t charbuffer[2] = {'\0', '\0'};
         while (true) {
 
@@ -78,13 +81,15 @@ void set_text_mode (UEFI_SYSTEM_TABLE* SystemTable) {
                 }
 
             } else if (k.ScanCode == ESC_SCANCODE) {
-                SystemTable->RuntimeServices->ResetSystem(UefiResetShutdown, UEFI_SUCCESS, 0, NULL);
+                return UEFI_SUCCESS;
             } else {
                 // Did not get a valid key press corresponding to a number within range or a number.
                 uefi_printf(SystemTable, u"\r\nRecived Scancode : %i ; Char : %s. Invalid text mode.\r\n", k.ScanCode, charbuffer);
             }
         }    
     }
+
+    return UEFI_SUCCESS;
 }
 
 extern "C" { // Avoids name mangling of the UEFI entry point.
@@ -94,9 +99,54 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
     to (0,0) */
     SystemTable->ConOut->Reset(SystemTable->ConOut, false);
     
-    // set_text_mode(SystemTable);
+    /*Set background and foreground colors.*/
+    SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
 
+    const char16_t* menu_options[] = {
+        u"Set Text Mode",
+        u"Set Graphics Mode"
+    };
 
+    uint64_t selected_menu_option = 0;
+
+    while(true) {
+
+        SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
+
+        // Print menu options and highlight the selected menu option.
+        for (uint64_t idx = 0; idx < ARRAY_SIZE(menu_options); idx++) {
+            if (idx == selected_menu_option) {
+                SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(HIGHLIGHT_FOREGROUND_COLOR, HIGHLIGHT_BACKGROUND_COLOR));
+            }
+            uefi_printf(SystemTable, u"%s\r\n", menu_options[idx]);
+            if (idx == selected_menu_option) {
+                SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
+            }
+        }
+
+        // Waiting for a keystroke. 
+        UEFI_INPUT_KEY k = uefi_wait_for_keystroke(SystemTable);
+
+        if (k.ScanCode == ESC_SCANCODE) {
+            SystemTable->RuntimeServices->ResetSystem(UefiResetShutdown, UEFI_SUCCESS, 0, NULL);
+        } else if (k.ScanCode == UP_ARROW_SCANCODE) {
+            if (selected_menu_option == 0) {
+                selected_menu_option = (ARRAY_SIZE(menu_options) - 1);
+            } else {
+                selected_menu_option--;
+            }
+        } else if (k.ScanCode == DOWN_ARROW_SCANCODE) {
+            if ((selected_menu_option + 1) == ARRAY_SIZE(menu_options)) {
+                selected_menu_option = 0;
+            } else {
+                selected_menu_option++;
+            }
+        } else if (k.UnicodeChar == u'\r') { // Enter Key pressed.
+            if (selected_menu_option == 0) {
+                set_text_mode (SystemTable);
+            }
+        }
+    }
 
     return UEFI_SUCCESS;
 
