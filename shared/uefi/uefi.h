@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+/******************************************************************************
+UEFI BASIC DECLARATIONS
+******************************************************************************/
+
 /* UEFI Data Types UEFI Specification v2.10 2.3.1 
 typedef uint8_t     UEFI_BOOLEAN;
 typedef int64_t     UEFI_INTN;
@@ -54,6 +58,10 @@ is the x86_64 Microsoft calling convention according
 to UEFI Specification v2.10 2.3.4.2.*/
 #define UEFI_API __attribute__((ms_abi))
 
+/******************************************************************************
+UEFI TABLE HEADER DECLARATION
+******************************************************************************/
+
 /* UEFI Specification v2.10 4.2.1 */
 typedef struct {
     uint64_t Signature;
@@ -62,6 +70,10 @@ typedef struct {
     uint32_t CRC32;
     uint32_t Reserved;
 } UEFI_TABLE_HEADER;
+
+/******************************************************************************
+UEFI SIMPLE TEXT OUTPUT PROTOCOL DECLARATIONS
+******************************************************************************/
 
 /* UEFI Specification v2.10 7.1.1 */
 typedef void (UEFI_API* UEFI_EVENT_NOTIFY) (
@@ -488,6 +500,10 @@ typedef struct {
     UEFI_CREATE_EVENT_EX                        CreateEventEx;        
 } UEFI_BOOT_SERVICES;
 
+/******************************************************************************
+UEFI RUNTIME SERVICES DECLARATIONS
+******************************************************************************/
+
 /* UEFI Specification v2.10 8.2.1 */
 typedef UEFI_STATUS (UEFI_API* UEFI_GET_VARIABLE) (
     IN char16_t*           VariableName,
@@ -640,11 +656,19 @@ typedef struct {
     UEFI_QUERY_VARIABLE_INFO        QueryVariableInfo;
 } UEFI_RUNTIME_SERVICES;
 
+/******************************************************************************
+UEFI CONFIGURATION TABLE DECLARATION
+******************************************************************************/
+
 /* UEFI Specification v2.10 4.6.1 */
 typedef struct{
     UEFI_GUID VendorGuid;
     void*     VendorTable;
 } UEFI_CONFIGURATION_TABLE;
+
+/******************************************************************************
+UEFI SIMPLE TEXT INPUT PROTOCOL DECLARATIONS
+******************************************************************************/
 
 // Forward declaration because of circular dependencies.
 typedef struct UEFI_SIMPLE_TEXT_INPUT_PROTOCOL UEFI_SIMPLE_TEXT_INPUT_PROTOCOL;
@@ -672,6 +696,10 @@ typedef struct UEFI_SIMPLE_TEXT_INPUT_PROTOCOL {
     UEFI_INPUT_READ_KEY ReadKeyStroke;
     UEFI_EVENT          WaitForKey;
 } UEFI_SIMPLE_TEXT_INPUT_PROTOCOL;
+
+/******************************************************************************
+UEFI SIMPLE TEXT OUTPUT PROTOCOL DECLARATIONS
+******************************************************************************/
 
 // Forward declaration because of circular dependencies.
 typedef struct UEFI_SIMPLE_TEXT_OUTPUT_PROTOCOL UEFI_SIMPLE_TEXT_OUTPUT_PROTOCOL;
@@ -784,6 +812,10 @@ typedef struct UEFI_SIMPLE_TEXT_OUTPUT_PROTOCOL {
     SIMPLE_TEXT_OUTPUT_MODE       *Mode;
 } UEFI_SIMPLE_TEXT_OUTPUT_PROTOCOL;
 
+/******************************************************************************
+UEFI SYSTEM TABLE AND ENTRY POINT DECLARATIONS
+******************************************************************************/
+
 /* UEFI Specification v2.10 4.3.1 */
 typedef struct {
     UEFI_TABLE_HEADER                 Hdr;
@@ -806,6 +838,10 @@ typedef UEFI_STATUS (UEFI_API* UEFI_IMAGE_ENTRY_POINT) (
     IN UEFI_HANDLE       ImageHandle,
     IN UEFI_SYSTEM_TABLE *SystemTable
 );
+
+/******************************************************************************
+UEFI STATUSES
+******************************************************************************/
 
 /* UEFI Success Code UEFI Specification v2.10 Appendix D */
 #define UEFI_SUCCESS 0
@@ -859,6 +895,101 @@ typedef UEFI_STATUS (UEFI_API* UEFI_IMAGE_ENTRY_POINT) (
 #define UEFI_COMPROMISED_DATA     UEFI_ENCODE_ERROR(33)
 #define UEFI_IP_ADDRESS_CONFLICT  UEFI_ENCODE_ERROR(34)
 #define UEFI_HTTP_ERROR           UEFI_ENCODE_ERROR(35)
+
+/******************************************************************************
+UEFI GRAPHICS OUTPUT PROTOCOL
+******************************************************************************/
+
+/* UEFI Specification v2.10 12.9.2 */
+#define UEFI_GRAPHICS_OUTPUT_PROTOCOL_GUID \
+{0x9042a9de, 0x23dc, 0x4a38, 0x96, 0xfb, {0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a}}
+
+typedef struct {
+    uint32_t RedMask;
+    uint32_t GreenMask;
+    uint32_t BlueMask;
+    uint32_t ReservedMask;
+} UEFI_PIXEL_BITMASK;
+
+typedef enum {
+    PixelRedGreenBlueReserved8BitPerColor,
+    PixelBlueGreenRedReserved8BitPerColor,
+    PixelBitMask,
+    PixelBltOnly,
+    PixelFormatMax
+} UEFI_GRAPHICS_PIXEL_FORMAT;
+
+typedef struct {
+    uint32_t                   Version;
+    uint32_t                   HorizontalResolution;
+    uint32_t                   VerticalResolution;
+    UEFI_GRAPHICS_PIXEL_FORMAT PixelFormat;
+    UEFI_PIXEL_BITMASK         PixelInformation;
+    uint32_t                   PixelsPerScanLine;
+} UEFI_GRAPHICS_OUTPUT_MODE_INFORMATION;
+
+typedef struct {
+    uint32_t                              MaxMode;
+    uint32_t                              Mode;
+    UEFI_GRAPHICS_OUTPUT_MODE_INFORMATION *Info;
+    uint64_t                              SizeOfInfo;
+    UEFI_PHYSICAL_ADDRESS                 FrameBufferBase;
+    uint64_t                              FrameBufferSize;
+} UEFI_GRAPHICS_OUTPUT_PROTOCOL_MODE;
+
+// Forward declaration because of circular dependencies.
+typedef struct UEFI_GRAPHICS_OUTPUT_PROTCOL UEFI_GRAPHICS_OUTPUT_PROTCOL;
+
+/* UEFI Specification v2.10 12.9.2.1 */
+typedef UEFI_STATUS (UEFI_API* UEFI_GRAPHICS_OUTPUT_PROTOCOL_QUERY_MODE) (
+    IN UEFI_GRAPHICS_OUTPUT_PROTOCOL*           This,
+    IN uint32_t                                 ModeNumber,
+    OUT uint64_t*                               SizeOfInfo,
+    OUT UEFI_GRAPHICS_OUTPUT_MODE_INFORMATION** Info
+);
+
+/* UEFI Specification v2.10 12.9.2.2 */
+typedef UEFI_STATUS (UEFI_API *UEFI_GRAPHICS_OUTPUT_PROTOCOL_SET_MODE) (
+    IN UEFI_GRAPHICS_OUTPUT_PROTOCOL *This,
+    IN uint32_t                      ModeNumber
+);
+
+/* UEFI Specification v2.10 12.9.2.3 */
+typedef struct {
+    uint8_t Blue;
+    uint8_t Green;
+    uint8_t Red;
+    uint8_t Reserved;
+} UEFI_GRAPHICS_OUTPUT_BLT_PIXEL;
+
+typedef enum {
+    UefiBltVideoFill,
+    UefiBltVideoToBltBuffer,
+    UefiBltBufferToVideo,
+    UefiBltVideoToVideo,
+    UefiGraphicsOutputBltOperationMax
+} UEFI_GRAPHICS_OUTPUT_BLT_OPERATION;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_GRAPHICS_OUTPUT_PROTOCOL_BLT) (
+    IN UEFI_GRAPHICS_OUTPUT_PROTOCOL*               This,
+    OPTIONAL IN OUT UEFI_GRAPHICS_OUTPUT_BLT_PIXEL* BltBuffer,
+    IN UEFI_GRAPHICS_OUTPUT_BLT_OPERATION           BltOperation,
+    IN uint64_t                                     SourceX,
+    IN uint64_t                                     SourceY,
+    IN uint64_t                                     DestinationX,
+    IN uint64_t                                     DestinationY,
+    IN uint64_t                                     Width,
+    IN uint64_t                                     Height,
+    OPTIONAL IN uint64_t                            Delta
+);
+
+/* UEFI Specification v2.10 12.9.2 */
+typedef struct UEFI_GRAPHICS_OUTPUT_PROTCOL {
+    UEFI_GRAPHICS_OUTPUT_PROTOCOL_QUERY_MODE QueryMode;
+    UEFI_GRAPHICS_OUTPUT_PROTOCOL_SET_MODE   SetMode;
+    UEFI_GRAPHICS_OUTPUT_PROTOCOL_BLT        Blt;
+    UEFI_GRAPHICS_OUTPUT_PROTOCOL_MODE*      Mode;
+} UEFI_GRAPHICS_OUTPUT_PROTOCOL;
 
 #endif
 /* END OF UEFI.H */
