@@ -27,9 +27,7 @@ CXXFLAGS = \
 	           -Wpedantic \
 	           -mno-red-zone \
 	           -fpic \
-	           -ffreestanding \
-	           -fno-stack-protector \
-	           -shared
+	           -ffreestanding
 
 .PHONY: all clean
 

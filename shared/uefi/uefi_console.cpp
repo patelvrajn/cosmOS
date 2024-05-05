@@ -3,23 +3,21 @@
 
 // TODO: Can generalize these functions?
 
-void uefi_print_number (UEFI_SYSTEM_TABLE* SystemTable, int32_t number, int32_t base) {
-    
+template <typename T> void uefi_print_number (UEFI_SYSTEM_TABLE* SystemTable, T number, uint64_t base) {
+
     /*Digits for bases 1 to 16*/
     char16_t* digits = u"0123456789ABCDEF";
 
-    /*INT32 ranges from -2,147,483,648 to 2,147,483,647 so 10 digits + sign + null character */
-    const uint32_t BUFFER_SIZE = 12; // TODO: May not be large enough for all use cases!!!
+    const uint32_t BUFFER_SIZE = 32; // TODO: May not be large enough for all use cases!!!
     char16_t charbuffer[BUFFER_SIZE];
 
-    uint32_t i;
+    uint32_t i = 0;
     bool isNegative = (number < 0);
 
     // Flip sign if negative for digit logic to work.
     if (isNegative) number = -1 * number;
 
     // Get digits from number in reverse order.
-    i = 0;
     do {
         charbuffer[i++] = digits[number % base];
         number /= base;
@@ -73,7 +71,14 @@ void uefi_printf (UEFI_SYSTEM_TABLE* SystemTable, char16_t* unformatted_string, 
                 case 'i': {
 
                     int32_t number = va_arg(v_args, int32_t);
-                    uefi_print_number(SystemTable, number, 10);
+                    uefi_print_number<int32_t>(SystemTable, number, 10);
+
+                } break;
+
+                case 'u': {
+
+                    uint64_t number = va_arg(v_args, uint64_t);
+                    uefi_print_number<uint64_t>(SystemTable, number, 10);
 
                 } break;
 

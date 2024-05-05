@@ -22,7 +22,7 @@ UEFI_STATUS set_text_mode (UEFI_SYSTEM_TABLE* SystemTable) {
         SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 
         static int64_t selected_text_mode = 0;
-        selected_text_mode = SystemTable->ConOut->Mode->CurrentMode;
+        selected_text_mode = SystemTable->ConOut->Mode->Mode;
 
         /*Query the selected text mode for num of rows and cols.*/
         uint64_t max_cols, max_rows;
@@ -40,7 +40,7 @@ UEFI_STATUS set_text_mode (UEFI_SYSTEM_TABLE* SystemTable) {
                     u"Columns: %i\r\n"
                     u"Rows: %i\r\n",
                     max_num_of_modes,
-                    SystemTable->ConOut->Mode->CurrentMode,
+                    SystemTable->ConOut->Mode->Mode,
                     SystemTable->ConOut->Mode->Attribute,
                     SystemTable->ConOut->Mode->CursorRow,
                     SystemTable->ConOut->Mode->CursorColumn,
@@ -87,6 +87,64 @@ UEFI_STATUS set_text_mode (UEFI_SYSTEM_TABLE* SystemTable) {
                 uefi_printf(SystemTable, u"\r\nRecived Scancode : %i ; Char : %s. Invalid text mode.\r\n", k.ScanCode, charbuffer);
             }
         }    
+    }
+
+    return UEFI_SUCCESS;
+}
+
+UEFI_STATUS set_graphics_mode (UEFI_SYSTEM_TABLE* SystemTable) {
+
+    /*Set background and foreground colors.*/
+    SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
+
+    SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
+
+    UEFI_GUID gop_guid = UEFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
+    UEFI_GRAPHICS_OUTPUT_PROTOCOL* gop = nullptr;
+
+    UEFI_STATUS gop_status = SystemTable->BootServices->LocateProtocol(&gop_guid, (void*)nullptr, (void**)&gop);
+
+    uint64_t mode_info_size;
+    UEFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode_info = nullptr;
+
+    if (UEFI_IS_ERROR(gop_status)){
+        uefi_printf(SystemTable, u"Could not locate GOP protocol. UEFI Error %i", gop_status);
+    }
+
+    while (true) {
+
+        /*Clear screen to background color, and set cursor to (0,0)*/
+        SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
+
+        gop_status = gop->QueryMode(gop, gop->Mode->Mode, &mode_info_size, &mode_info);
+
+        if (UEFI_IS_ERROR(gop_status)){
+            uefi_printf(SystemTable, u"Could not query GOP mode. UEFI Error %i", gop_status);
+        }
+
+        uefi_printf(SystemTable, u"Max Mode: %i\r\n"
+                                 u"Current Mode: %i\r\n"
+                                 u"WidthxHeight: %ix%i\r\n"
+                                 u"Framebuffer Address: %u\r\n"
+                                 u"Framebuffer Size: %i\r\n"
+                                 u"Pixel Format: %i\r\n"
+                                 u"Pixels Per Scan Line: %i\r\n",
+                                 gop->Mode->MaxMode,
+                                 gop->Mode->Mode,
+                                 mode_info->HorizontalResolution, mode_info->VerticalResolution,
+                                 gop->Mode->FrameBufferBase,
+                                 gop->Mode->FrameBufferSize,
+                                 mode_info->PixelFormat,
+                                 mode_info->PixelsPerScanLine
+        );
+
+        for (uint64_t idx = 0; idx < (uint64_t)gop->Mode->MaxMode; idx++) {
+            gop->QueryMode(gop, idx, &mode_info_size, &mode_info);
+            uefi_printf(SystemTable, u"GOP Mode (h x v) %i: %ix%i\r\n", idx, mode_info->HorizontalResolution, mode_info->VerticalResolution);
+        }
+
+        while (true);
+
     }
 
     return UEFI_SUCCESS;
@@ -144,6 +202,8 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
         } else if (k.UnicodeChar == u'\r') { // Enter Key pressed.
             if (selected_menu_option == 0) {
                 set_text_mode (SystemTable);
+            } else if (selected_menu_option == 1) {
+                set_graphics_mode (SystemTable);
             }
         }
     }

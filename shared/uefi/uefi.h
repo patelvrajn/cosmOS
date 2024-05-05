@@ -72,7 +72,7 @@ typedef struct {
 } UEFI_TABLE_HEADER;
 
 /******************************************************************************
-UEFI SIMPLE TEXT OUTPUT PROTOCOL DECLARATIONS
+UEFI BOOT SERVICES DECLARATIONS
 ******************************************************************************/
 
 /* UEFI Specification v2.10 7.1.1 */
@@ -344,7 +344,7 @@ typedef UEFI_STATUS (UEFI_API* UEFI_PROTOCOLS_PER_HANDLE) (
 );
 
 /* UEFI Specification v2.10 7.3.15 */
-typedef UEFI_STATUS (UEFI_API *UEFI_LOCATE_HANDLE_BUFFER) (
+typedef UEFI_STATUS (UEFI_API* UEFI_LOCATE_HANDLE_BUFFER) (
     IN UEFI_LOCATE_SEARCH_TYPE SearchType,
     OPTIONAL IN UEFI_GUID*     Protocol,
     OPTIONAL IN void*          SearchKey,
@@ -472,6 +472,7 @@ typedef struct {
     UEFI_REINSTALL_PROTOCOL_INTERFACE           ReinstallProtocolInterface;
     UEFI_UNINSTALL_PROTOCOL_INTERFACE           UninstallProtocolInterface;
     UEFI_HANDLE_PROTOCOL                        HandleProtocol;
+    void*                                       Reserved;
     UEFI_REGISTER_PROTOCOL_NOTIFY               RegisterProtocolNotify;
     UEFI_LOCATE_HANDLE                          LocateHandle;
     UEFI_LOCATE_DEVICE_PATH                     LocateDevicePath;
@@ -707,7 +708,7 @@ typedef struct UEFI_SIMPLE_TEXT_OUTPUT_PROTOCOL UEFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
 /* UEFI Specification v2.10 12.4.1 */
 typedef struct {
     int32_t MaxMode;
-    int32_t CurrentMode;
+    int32_t Mode;
     int32_t Attribute;
     int32_t CursorColumn;
     int32_t CursorRow;
@@ -938,7 +939,7 @@ typedef struct {
 } UEFI_GRAPHICS_OUTPUT_PROTOCOL_MODE;
 
 // Forward declaration because of circular dependencies.
-typedef struct UEFI_GRAPHICS_OUTPUT_PROTCOL UEFI_GRAPHICS_OUTPUT_PROTCOL;
+typedef struct UEFI_GRAPHICS_OUTPUT_PROTOCOL UEFI_GRAPHICS_OUTPUT_PROTOCOL;
 
 /* UEFI Specification v2.10 12.9.2.1 */
 typedef UEFI_STATUS (UEFI_API* UEFI_GRAPHICS_OUTPUT_PROTOCOL_QUERY_MODE) (
@@ -949,9 +950,9 @@ typedef UEFI_STATUS (UEFI_API* UEFI_GRAPHICS_OUTPUT_PROTOCOL_QUERY_MODE) (
 );
 
 /* UEFI Specification v2.10 12.9.2.2 */
-typedef UEFI_STATUS (UEFI_API *UEFI_GRAPHICS_OUTPUT_PROTOCOL_SET_MODE) (
-    IN UEFI_GRAPHICS_OUTPUT_PROTOCOL *This,
-    IN uint32_t                      ModeNumber
+typedef UEFI_STATUS (UEFI_API* UEFI_GRAPHICS_OUTPUT_PROTOCOL_SET_MODE) (
+    IN UEFI_GRAPHICS_OUTPUT_PROTOCOL* This,
+    IN uint32_t                       ModeNumber
 );
 
 /* UEFI Specification v2.10 12.9.2.3 */
@@ -984,7 +985,7 @@ typedef UEFI_STATUS (UEFI_API* UEFI_GRAPHICS_OUTPUT_PROTOCOL_BLT) (
 );
 
 /* UEFI Specification v2.10 12.9.2 */
-typedef struct UEFI_GRAPHICS_OUTPUT_PROTCOL {
+typedef struct UEFI_GRAPHICS_OUTPUT_PROTOCOL {
     UEFI_GRAPHICS_OUTPUT_PROTOCOL_QUERY_MODE QueryMode;
     UEFI_GRAPHICS_OUTPUT_PROTOCOL_SET_MODE   SetMode;
     UEFI_GRAPHICS_OUTPUT_PROTOCOL_BLT        Blt;
