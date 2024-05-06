@@ -187,6 +187,10 @@ UEFI_STATUS set_graphics_mode (UEFI_SYSTEM_TABLE* SystemTable) {
             }
         } else if (k.UnicodeChar == u'\r') { // Enter Key pressed.
             gop->SetMode(gop, selected_menu_option);
+            gop->QueryMode(gop, selected_menu_option, &mode_info_size, &mode_info);
+            UEFI_GRAPHICS_OUTPUT_BLT_PIXEL blue_bg_pixel = {0xFF, 0x00, 0x00, 0x00};
+            // Fill the screen with blue after changing resolution.
+            gop->Blt (gop, &blue_bg_pixel, UefiBltVideoFill, 0, 0, 0, 0, mode_info->HorizontalResolution, mode_info->VerticalResolution, 0);
         }
     }
 
