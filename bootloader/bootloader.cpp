@@ -104,12 +104,18 @@ UEFI_STATUS set_graphics_mode (UEFI_SYSTEM_TABLE* SystemTable) {
 
     UEFI_STATUS gop_status = SystemTable->BootServices->LocateProtocol(&gop_guid, (void*)nullptr, (void**)&gop);
 
-    uint64_t mode_info_size;
-    UEFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode_info = nullptr;
-
     if (UEFI_IS_ERROR(gop_status)){
         uefi_printf(SystemTable, u"Could not locate GOP protocol. UEFI Error %i", gop_status);
     }
+
+    uint64_t mode_info_size;
+    UEFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode_info = nullptr;
+
+    // Get maximum number of text rows for the bottom of the menu.
+    uint64_t text_max_cols, menu_bottom;
+    SystemTable->ConOut->QueryMode(SystemTable->ConOut, SystemTable->ConOut->Mode->Mode, &text_max_cols, &menu_bottom);
+
+    uint64_t selected_menu_option = 0;
 
     while (true) {
 
@@ -138,13 +144,50 @@ UEFI_STATUS set_graphics_mode (UEFI_SYSTEM_TABLE* SystemTable) {
                                  mode_info->PixelsPerScanLine
         );
 
-        for (uint64_t idx = 0; idx < (uint64_t)gop->Mode->MaxMode; idx++) {
+        uefi_printf(SystemTable, u"Available graphics modes:\r\n");
+
+        // Current cursor row after above information prints.
+        int32_t  menu_top = SystemTable->ConOut->Mode->CursorRow;
+
+        // Length of menu so that above information remains on screen.
+        uint64_t menu_len = (menu_bottom - 1) - menu_top;
+
+        // Print only a select amount s.t. all options are viewable on screen
+        // alongside above information.
+        for (uint64_t idx = selected_menu_option; idx < (selected_menu_option + menu_len); idx++) {
+            if (idx == selected_menu_option) {
+                SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(HIGHLIGHT_FOREGROUND_COLOR, HIGHLIGHT_BACKGROUND_COLOR));
+            }
             gop->QueryMode(gop, idx, &mode_info_size, &mode_info);
-            uefi_printf(SystemTable, u"GOP Mode (h x v) %i: %ix%i\r\n", idx, mode_info->HorizontalResolution, mode_info->VerticalResolution);
+            uefi_printf(SystemTable, u"GOP Mode # %i (h x v); %ix%i\r\n", idx, mode_info->HorizontalResolution, mode_info->VerticalResolution);
+            if (idx == selected_menu_option) {
+                SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
+            }
+            if ((idx + 1) > (gop->Mode->MaxMode - 1)) {
+                break;
+            }
         }
 
-        while (true);
+        // Waiting for a keystroke. 
+        UEFI_INPUT_KEY k = uefi_wait_for_keystroke(SystemTable);
 
+        if (k.ScanCode == ESC_SCANCODE) {
+            return UEFI_SUCCESS;
+        } else if (k.ScanCode == UP_ARROW_SCANCODE) {
+            if (selected_menu_option == 0) {
+                selected_menu_option = (gop->Mode->MaxMode - 1);
+            } else {
+                selected_menu_option--;
+            }
+        } else if (k.ScanCode == DOWN_ARROW_SCANCODE) {
+            if ((selected_menu_option + 1) == gop->Mode->MaxMode) {
+                selected_menu_option = 0;
+            } else {
+                selected_menu_option++;
+            }
+        } else if (k.UnicodeChar == u'\r') { // Enter Key pressed.
+            gop->SetMode(gop, selected_menu_option);
+        }
     }
 
     return UEFI_SUCCESS;
