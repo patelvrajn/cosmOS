@@ -197,6 +197,35 @@ UEFI_STATUS set_graphics_mode (UEFI_SYSTEM_TABLE* SystemTable) {
     return UEFI_SUCCESS;
 }
 
+void UEFI_API print_datetime (UEFI_EVENT Event, void* Context) {
+
+    UEFI_SYSTEM_TABLE* SystemTable = (UEFI_SYSTEM_TABLE *) Context;
+
+    // Save current text cursor row and col.
+    int32_t saved_text_cursor_row = SystemTable->ConOut->Mode->CursorRow;
+    int32_t saved_text_cursor_col = SystemTable->ConOut->Mode->CursorColumn;
+
+    uint64_t text_max_cols, text_max_rows;
+    SystemTable->ConOut->QueryMode(SystemTable->ConOut, SystemTable->ConOut->Mode->Mode, &text_max_cols, &text_max_rows);
+
+    // Date time will print out MM/DD/YYYY HH:MM:SS which is 19 characters.
+    // Set cursor 19 characters to the right of the last column of row 0.
+    // This will set the date time to printed on the top right of the screen.
+    SystemTable->ConOut->SetCursorPosition(SystemTable->ConOut, ((text_max_cols - 1) - 19), 0);
+
+    // Get current date and time from battery powered real time clock on platform.
+    UEFI_TIME datetime;
+    SystemTable->RuntimeServices->GetTime(&datetime, nullptr);
+
+    // Print date time in format MM/DD/YYYY HH:MM:SS.
+    uefi_printf(SystemTable, u"%u/%u/%u %u:%u:%u", 
+    datetime.Month, datetime.Day, datetime.Year, 
+    datetime.Hour, datetime.Minute, datetime.Second);
+
+    // Restore text cursor row and col.
+    SystemTable->ConOut->SetCursorPosition(SystemTable->ConOut, saved_text_cursor_col, saved_text_cursor_row);
+}
+
 extern "C" { // Avoids name mangling of the UEFI entry point.
 UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
 
@@ -206,6 +235,16 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
     
     /*Set background and foreground colors.*/
     SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
+
+    UEFI_EVENT datetime_event;
+
+    // Create an event that is of TIMER and NOTIFY SIGNAL type that will
+    // queue the print_datetime function when the event is signaled. Pass
+    // the SystemTable as a parameter to the callback function print_datetime.
+    SystemTable->BootServices->CreateEvent((EVT_TIMER | EVT_NOTIFY_SIGNAL), TPL_CALLBACK, print_datetime, (void*)SystemTable, &datetime_event);
+
+    // Create a timer that will signal the event every 10000000 100ns units or 1 second.
+    SystemTable->BootServices->SetTimer(datetime_event, TimerPeriodic, 10000000);
 
     const char16_t* menu_options[] = {
         u"Set Text Mode",

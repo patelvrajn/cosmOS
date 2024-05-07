@@ -89,6 +89,14 @@ typedef UEFI_STATUS (UEFI_API* UEFI_CREATE_EVENT) (
     OUT UEFI_EVENT*       Event
 );
 
+// Event types
+#define EVT_TIMER                         0x80000000
+#define EVT_RUNTIME                       0x40000000
+#define EVT_NOTIFY_WAIT                   0x00000100
+#define EVT_NOTIFY_SIGNAL                 0x00000200
+#define EVT_SIGNAL_EXIT_BOOT_SERVICES     0x00000201
+#define EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE 0x60000202
+
 /* UEFI Specification v2.10 7.1.2 */
 typedef UEFI_STATUS (UEFI_API* UEFI_CREATE_EVENT_EX) (
     IN uint32_t                   Type,
@@ -138,6 +146,12 @@ typedef UEFI_STATUS (UEFI_API* UEFI_SET_TIMER) (
 typedef UEFI_TPL (UEFI_API* UEFI_RAISE_TPL) (
     IN UEFI_TPL NewTpl
 );
+
+// Task priority levels
+#define TPL_APPLICATION 4
+#define TPL_CALLBACK    8
+#define TPL_NOTIFY      16
+#define TPL_HIGH_LEVEL  31
 
 /* UEFI Specification v2.10 7.1.9 */
 typedef void (UEFI_API* UEFI_RESTORE_TPL) (
