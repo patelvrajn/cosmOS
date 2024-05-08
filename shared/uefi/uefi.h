@@ -1006,5 +1006,217 @@ typedef struct UEFI_GRAPHICS_OUTPUT_PROTOCOL {
     UEFI_GRAPHICS_OUTPUT_PROTOCOL_MODE*      Mode;
 } UEFI_GRAPHICS_OUTPUT_PROTOCOL;
 
+/******************************************************************************
+UEFI LOADED IMAGE PROTOCOL (UEFI Specification v2.10 9.1)
+******************************************************************************/
+typedef struct {
+    uint32_t                   Revision;
+    UEFI_HANDLE                ParentHandle;
+    UEFI_SYSTEM_TABLE*         SystemTable;
+    UEFI_HANDLE                DeviceHandle;
+    UEFI_DEVICE_PATH_PROTOCOL* FilePath;
+    void*                      Reserved;
+    uint32_t                   LoadOptionsSize;
+    void*                      LoadOptions;
+    void*                      ImageBase;
+    uint64_t                   ImageSize;
+    UEFI_MEMORY_TYPE           ImageCodeType;
+    UEFI_MEMORY_TYPE           ImageDataType;
+    UEFI_IMAGE_UNLOAD          Unload;
+} EFI_LOADED_IMAGE_PROTOCOL;
+
+/******************************************************************************
+UEFI SIMPLE FILE SYSTEM AND FILE PROTOCOL (UEFI Specification v2.10 13.4 - 13.5)
+******************************************************************************/
+
+// Forward declaration because of circular dependencies.
+typedef struct UEFI_FILE_PROTOCOL UEFI_FILE_PROTOCOL;
+
+/* UEFI Specification v2.10 13.5.2 */
+// Open Modes
+#define UEFI_FILE_MODE_READ   0x0000000000000001
+#define UEFI_FILE_MODE_WRITE  0x0000000000000002
+#define UEFI_FILE_MODE_CREATE 0x8000000000000000
+
+// File Attributes
+#define UEFI_FILE_READ_ONLY  0x0000000000000001
+#define UEFI_FILE_HIDDEN     0x0000000000000002
+#define UEFI_FILE_SYSTEM     0x0000000000000004
+#define UEFI_FILE_RESERVED   0x0000000000000008
+#define UEFI_FILE_DIRECTORY  0x0000000000000010
+#define UEFI_FILE_ARCHIVE    0x0000000000000020
+#define UEFI_FILE_VALID_ATTR 0x0000000000000037
+
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_OPEN) (
+    IN UEFI_FILE_PROTOCOL*   This,
+    OUT UEFI_FILE_PROTOCOL** NewHandle,
+    IN char16_t*             FileName,
+    IN uint64_t              OpenMode,
+    IN uint64_t              Attributes
+);
+
+/* UEFI Specification v2.10 13.5.3 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_CLOSE) (
+    IN UEFI_FILE_PROTOCOL* This
+);
+
+/* UEFI Specification v2.10 13.5.4 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_DELETE) (
+    IN UEFI_FILE_PROTOCOL* This
+);
+
+/* UEFI Specification v2.10 13.5.5 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_READ) (
+    IN UEFI_FILE_PROTOCOL* This,
+    IN OUT uint64_t*       BufferSize,
+    OUT void*              Buffer
+);
+
+/* UEFI Specification v2.10 13.5.6 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_WRITE) (
+    IN UEFI_FILE_PROTOCOL* This,
+    IN OUT uint64_t*       BufferSize,
+    IN void*               Buffer
+);
+
+/* UEFI Specification v2.10 13.5.7 */
+typedef struct {
+    UEFI_EVENT  Event;
+    UEFI_STATUS Status;
+    uint64_t    BufferSize;
+    void*       Buffer;
+} UEFI_FILE_IO_TOKEN;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_OPEN_EX) (
+    IN UEFI_FILE_PROTOCOL*     This,
+    OUT UEFI_FILE_PROTOCOL**   NewHandle,
+    IN char16_t*               FileName,
+    IN uint64_t                OpenMode,
+    IN uint64_t                Attributes,
+    IN OUT UEFI_FILE_IO_TOKEN* Token
+);
+
+/* UEFI Specification v2.10 13.5.8 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_READ_EX) (
+    IN UEFI_FILE_PROTOCOL*     This,
+    IN OUT UEFI_FILE_IO_TOKEN* Token
+);
+
+/* UEFI Specification v2.10 13.5.9 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_WRITE_EX) (
+    IN UEFI_FILE_PROTOCOL*     This,
+    IN OUT UEFI_FILE_IO_TOKEN* Token
+);
+
+/* UEFI Specification v2.10 13.5.10 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_FLUSH_EX) (
+    IN UEFI_FILE_PROTOCOL*     This,
+    IN OUT UEFI_FILE_IO_TOKEN* Token
+);
+
+/* UEFI Specification v2.10 13.5.11 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_SET_POSITION) (
+    IN UEFI_FILE_PROTOCOL* This,
+    IN uint64_t            Position
+);
+
+/* UEFI Specification v2.10 13.5.12 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_GET_POSITION) (
+    IN UEFI_FILE_PROTOCOL* This,
+    OUT uint64_t*          Position
+);
+
+/* UEFI Specification v2.10 13.5.13 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_GET_INFO) (
+    IN UEFI_FILE_PROTOCOL* This,
+    IN UEFI_GUID*          InformationType,
+    IN OUT uint64_t*       BufferSize,
+    OUT void*              Buffer
+);
+
+/* UEFI Specification v2.10 13.5.14 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_SET_INFO) (
+    IN UEFI_FILE_PROTOCOL* This,
+    IN UEFI_GUID*          InformationType,
+    IN uint64_t            BufferSize,
+    IN void*               Buffer
+);
+
+/* UEFI Specification v2.10 13.5.15 */
+typedef UEFI_STATUS (UEFI_API* UEFI_FILE_FLUSH) (
+    IN UEFI_FILE_PROTOCOL* This
+);
+
+/* UEFI Specification v2.10 13.5.16 */
+#define UEFI_FILE_INFO_ID \
+{0x09576e92, 0x6d3f, 0x11d2, 0x8e39, {0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}}
+
+typedef struct {
+    uint64_t  Size;
+    uint64_t  FileSize;
+    uint64_t  PhysicalSize;
+    UEFI_TIME CreateTime;
+    UEFI_TIME LastAccessTime;
+    UEFI_TIME ModificationTime;
+    uint64_t  Attribute;
+    char16_t  FileName [];
+} UEFI_FILE_INFO;
+
+/* UEFI Specification v2.10 13.5.17 */
+#define EFI_FILE_SYSTEM_INFO_ID \
+{0x09576e93, 0x6d3f, 0x11d2, 0x8e39, {0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}}
+
+typedef struct {
+    uint64_t Size;
+    uint8_t  ReadOnly;
+    uint64_t VolumeSize;
+    uint64_t FreeSpace;
+    uint32_t BlockSize;
+    char16_t VolumeLabel[];
+} EFI_FILE_SYSTEM_INFO;
+
+/* UEFI Specification v2.10 13.5.1 */
+#define UEFI_FILE_PROTOCOL_REVISION        0x00010000
+#define UEFI_FILE_PROTOCOL_REVISION2       0x00020000
+#define UEFI_FILE_PROTOCOL_LATEST_REVISION UEFI_FILE_PROTOCOL_REVISION2
+
+typedef struct UEFI_FILE_PROTOCOL {
+    uint64_t               Revision;
+    UEFI_FILE_OPEN         Open;
+    UEFI_FILE_CLOSE        Close;
+    UEFI_FILE_DELETE       Delete;
+    UEFI_FILE_READ         Read;
+    UEFI_FILE_WRITE        Write;
+    UEFI_FILE_GET_POSITION GetPosition;
+    UEFI_FILE_SET_POSITION SetPosition;
+    UEFI_FILE_GET_INFO     GetInfo;
+    UEFI_FILE_SET_INFO     SetInfo;
+    UEFI_FILE_FLUSH        Flush;
+    UEFI_FILE_OPEN_EX      OpenEx;
+    UEFI_FILE_READ_EX      ReadEx;
+    UEFI_FILE_WRITE_EX     WriteEx;
+    UEFI_FILE_FLUSH_EX     FlushEx;
+} UEFI_FILE_PROTOCOL;
+
+// Forward declaration because of circular dependencies.
+typedef struct UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL;
+
+/* UEFI Specification v2.10 13.4.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL_OPEN_VOLUME) (
+    IN UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL* This,
+    OUT UEFI_FILE_PROTOCOL**             Root
+);
+
+/* UEFI Specification v2.10 13.4.1 */
+#define UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID \
+{0x0964e5b22, 0x6459, 0x11d2, 0x8e, 0x39, {0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}}
+
+#define UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL_REVISION 0x00010000
+
+typedef struct UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL {
+    uint64_t                                     Revision;
+    UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL_OPEN_VOLUME OpenVolume;
+} UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL;
+
 #endif
 /* END OF UEFI.H */
