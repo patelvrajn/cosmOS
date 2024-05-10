@@ -284,7 +284,7 @@ typedef UEFI_STATUS (UEFI_API* UEFI_LOCATE_HANDLE) (
 /* UEFI Specification v2.10 7.3.7 */
 typedef UEFI_STATUS (UEFI_API* UEFI_HANDLE_PROTOCOL) (
     IN UEFI_HANDLE Handle,
-    IN UEFI_GUID   Protocol,
+    IN UEFI_GUID*  Protocol,
     OUT void**     Interface
 );
 
@@ -311,6 +311,13 @@ typedef UEFI_STATUS (UEFI_API* UEFI_OPEN_PROTOCOL) (
     IN UEFI_HANDLE      ControllerHandle,
     IN uint32_t         Attributes
 );
+
+#define UEFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL  0x00000001
+#define UEFI_OPEN_PROTOCOL_GET_PROTOCOL        0x00000002
+#define UEFI_OPEN_PROTOCOL_TEST_PROTOCOL       0x00000004
+#define UEFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER 0x00000008
+#define UEFI_OPEN_PROTOCOL_BY_DRIVER           0x00000010
+#define UEFI_OPEN_PROTOCOL_EXCLUSIVE           0x00000020
 
 /* UEFI Specification v2.10 7.3.10 */
 typedef UEFI_STATUS (UEFI_API* UEFI_CLOSE_PROTOCOL) (
@@ -1009,6 +1016,12 @@ typedef struct UEFI_GRAPHICS_OUTPUT_PROTOCOL {
 /******************************************************************************
 UEFI LOADED IMAGE PROTOCOL (UEFI Specification v2.10 9.1)
 ******************************************************************************/
+
+#define UEFI_LOADED_IMAGE_PROTOCOL_GUID \
+{0x5B1B31A1, 0x9562, 0x11d2, 0x8E, 0x3F, {0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B}}
+
+#define UEFI_LOADED_IMAGE_PROTOCOL_REVISION 0x1000
+
 typedef struct {
     uint32_t                   Revision;
     UEFI_HANDLE                ParentHandle;
@@ -1023,7 +1036,7 @@ typedef struct {
     UEFI_MEMORY_TYPE           ImageCodeType;
     UEFI_MEMORY_TYPE           ImageDataType;
     UEFI_IMAGE_UNLOAD          Unload;
-} EFI_LOADED_IMAGE_PROTOCOL;
+} UEFI_LOADED_IMAGE_PROTOCOL;
 
 /******************************************************************************
 UEFI SIMPLE FILE SYSTEM AND FILE PROTOCOL (UEFI Specification v2.10 13.4 - 13.5)
@@ -1159,7 +1172,7 @@ typedef struct {
     UEFI_TIME LastAccessTime;
     UEFI_TIME ModificationTime;
     uint64_t  Attribute;
-    char16_t  FileName [];
+    char16_t  FileName [256]; // Note: 256 length is not part of spec. Standard maximum length for file names.
 } UEFI_FILE_INFO;
 
 /* UEFI Specification v2.10 13.5.17 */
@@ -1172,8 +1185,8 @@ typedef struct {
     uint64_t VolumeSize;
     uint64_t FreeSpace;
     uint32_t BlockSize;
-    char16_t VolumeLabel[];
-} EFI_FILE_SYSTEM_INFO;
+    char16_t VolumeLabel[256]; // Note: 256 length is not part of spec. Standard maximum length for file names.
+} UEFI_FILE_SYSTEM_INFO;
 
 /* UEFI Specification v2.10 13.5.1 */
 #define UEFI_FILE_PROTOCOL_REVISION        0x00010000

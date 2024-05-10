@@ -226,6 +226,169 @@ void UEFI_API print_datetime (UEFI_EVENT Event, void* Context) {
     SystemTable->ConOut->SetCursorPosition(SystemTable->ConOut, saved_text_cursor_col, saved_text_cursor_row);
 }
 
+UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
+
+    UEFI_GUID loaded_image_protocol_guid = UEFI_LOADED_IMAGE_PROTOCOL_GUID;
+    UEFI_LOADED_IMAGE_PROTOCOL* lip;
+
+    // Use loaded image protocol for this UEFI image to produce the device handle.
+    UEFI_STATUS status = SystemTable->BootServices->OpenProtocol (
+        ImageHandle, 
+        &loaded_image_protocol_guid, 
+        (void**)&lip, ImageHandle, 
+        nullptr, 
+        UEFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+
+    if (UEFI_IS_ERROR(status)){
+        uefi_printf(SystemTable, u"Loaded Image Protocol not found on handle. UEFI Error %i", status);
+    }
+
+    UEFI_GUID simple_file_system_guid = UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
+    UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL* sfs;
+
+    // Query the device handle for the Simple Filesystem protocol in order to 
+    // access the root of the EFI system partition.
+    status = SystemTable->BootServices->OpenProtocol (
+        lip->DeviceHandle, 
+        &simple_file_system_guid, 
+        (void**)&sfs,
+        ImageHandle,
+        nullptr,
+        UEFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+
+    if (UEFI_IS_ERROR(status)){
+        uefi_printf(SystemTable, u"Simple File System Protocol not found on handle. UEFI Error %i", status);
+    }
+
+    // Obtain a pointer to the file handle of the root.
+    UEFI_FILE_PROTOCOL* fp;
+    status = sfs->OpenVolume(sfs, &fp);
+
+    if (UEFI_IS_ERROR(status)){
+        uefi_printf(SystemTable, u"Simple File System Protocol could not open volume. UEFI Error %i", status);
+    }
+
+    uint64_t selected_menu_option = 0;
+
+    while (true) {
+
+        // Clear screen to the default background color.
+        SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
+        SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
+
+        uint64_t file_count = 0;
+
+        UEFI_FILE_INFO file_info;
+        UEFI_FILE_INFO selected_file_info;
+        uint64_t file_info_size = sizeof(file_info);
+        fp->SetPosition(fp, 0); // Reset the process of reading the directory entries.
+        fp->Read(fp, &file_info_size, (void*)&file_info);
+
+        while (file_info_size > 0) {
+
+            if (file_count == selected_menu_option) {
+                SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(HIGHLIGHT_FOREGROUND_COLOR, HIGHLIGHT_BACKGROUND_COLOR));
+                selected_file_info = file_info;
+            }
+
+            uefi_printf (
+                SystemTable, u"[%s] %s\r\n", 
+                (file_info.Attribute & UEFI_FILE_DIRECTORY) ? u"DIR" : u"FILE", 
+                file_info.FileName);
+
+            if (file_count == selected_menu_option) {
+                SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
+            }
+
+            file_info_size = sizeof(file_info);
+
+            fp->Read(fp, &file_info_size, (void*)&file_info);
+
+            file_count++;
+        }
+
+        // Waiting for a keystroke. 
+        UEFI_INPUT_KEY k = uefi_wait_for_keystroke(SystemTable);
+
+        if (k.ScanCode == ESC_SCANCODE) { // Escape key pressed.
+            return UEFI_SUCCESS;
+        } else if (k.ScanCode == UP_ARROW_SCANCODE) {
+            // Move selected menu option index down in value as user scrolls up. Rollover
+            // index to the maximum if index is at the minimum.
+            if (selected_menu_option == 0) {
+                selected_menu_option = (file_count - 1);
+            } else {
+                selected_menu_option--;
+            }
+        } else if (k.ScanCode == DOWN_ARROW_SCANCODE) { // Down key pressed.
+            // Move selected menu option index up in value as user scrolls down. Rollover
+            // index to the minimum if index is at the maximum.
+            if ((selected_menu_option + 1) == file_count) {
+                selected_menu_option = 0;
+            } else {
+                selected_menu_option++;
+            }
+        } else if (k.UnicodeChar == u'\r') { // Enter Key pressed.
+            if ((selected_file_info.Attribute & UEFI_FILE_DIRECTORY)) // Is the selection a directory?
+            {
+
+                // Close the existing file handle for the current location and
+                // assign the new handle for the location.
+                UEFI_FILE_PROTOCOL* new_fp;
+                fp->Open(fp, &new_fp, selected_file_info.FileName, UEFI_FILE_MODE_READ, 0);
+                fp->Close(fp);
+                fp = new_fp;
+
+            } else {
+
+                // Dynamically allocate memory for a buffer large enough to store the file.
+                void* file_contents_buffer;
+                uint64_t file_contents_buffer_size = selected_file_info.FileSize;
+                status = SystemTable->BootServices->AllocatePool(UefiLoaderData, file_contents_buffer_size, &file_contents_buffer);
+
+                if (UEFI_IS_ERROR(status)){
+                    uefi_printf(SystemTable, u"Could not allocate pool of memory for buffer. UEFI Error %i", status);
+                }
+
+                // Open a file handle for the file.
+                UEFI_FILE_PROTOCOL* file_to_read;
+                status = fp->Open(fp, &file_to_read, selected_file_info.FileName, UEFI_FILE_MODE_READ, 0);
+
+                if (UEFI_IS_ERROR(status)){
+                    uefi_printf(SystemTable, u"Could not open a file handle. UEFI Error %i", status);
+                }
+
+                // Read the opened file's contents into the buffer.
+                status = file_to_read->Read(file_to_read, &file_contents_buffer_size, file_contents_buffer);
+
+                if (UEFI_IS_ERROR(status)){
+                    uefi_printf(SystemTable, u"Could not read file contents into buffer. UEFI Error %i", status);
+                }
+
+                // Readout the file contents byte at a time.
+                char* read_char = (char *) file_contents_buffer;
+                for (uint64_t idx = file_contents_buffer_size; idx > 0; idx--){
+                    char16_t s[2];
+                    s[1] = '\0';
+                    s[0] = (char16_t)*read_char;
+                    uefi_printf(SystemTable, u"%s", s);
+                    read_char++;
+                }
+
+                // Free the pool of memory allocated.
+                SystemTable->BootServices->FreePool(file_contents_buffer);
+
+                // Wait for keypress to continue.
+                uefi_printf(SystemTable, u"Press any key to continue...");
+                uefi_wait_for_keystroke(SystemTable);
+
+            }
+        }
+    }
+
+    return UEFI_SUCCESS;
+}
+
 extern "C" { // Avoids name mangling of the UEFI entry point.
 UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
 
@@ -248,7 +411,8 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
 
     const char16_t* menu_options[] = {
         u"Set Text Mode",
-        u"Set Graphics Mode"
+        u"Set Graphics Mode",
+        u"Read ESP"
     };
 
     uint64_t selected_menu_option = 0;
@@ -271,29 +435,37 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
         // Waiting for a keystroke. 
         UEFI_INPUT_KEY k = uefi_wait_for_keystroke(SystemTable);
 
-        if (k.ScanCode == ESC_SCANCODE) {
+        if (k.ScanCode == ESC_SCANCODE) { // Escape key pressed.
+            // Shutdown system.
             SystemTable->RuntimeServices->ResetSystem(UefiResetShutdown, UEFI_SUCCESS, 0, NULL);
         } else if (k.ScanCode == UP_ARROW_SCANCODE) {
+            // Move selected menu option index down in value as user scrolls up. Rollover
+            // index to the maximum if index is at the minimum.
             if (selected_menu_option == 0) {
                 selected_menu_option = (ARRAY_SIZE(menu_options) - 1);
             } else {
                 selected_menu_option--;
             }
-        } else if (k.ScanCode == DOWN_ARROW_SCANCODE) {
+        } else if (k.ScanCode == DOWN_ARROW_SCANCODE) { // Down key pressed.
+            // Move selected menu option index up in value as user scrolls down. Rollover
+            // index to the minimum if index is at the maximum.
             if ((selected_menu_option + 1) == ARRAY_SIZE(menu_options)) {
                 selected_menu_option = 0;
             } else {
                 selected_menu_option++;
             }
         } else if (k.UnicodeChar == u'\r') { // Enter Key pressed.
+            // Call appriopiate function depending on selected option.
             if (selected_menu_option == 0) {
                 set_text_mode (SystemTable);
             } else if (selected_menu_option == 1) {
                 set_graphics_mode (SystemTable);
+            } else if (selected_menu_option == 2) {
+                read_esp (ImageHandle, SystemTable);
             }
         }
     }
 
     return UEFI_SUCCESS;
-
+    
 }}
