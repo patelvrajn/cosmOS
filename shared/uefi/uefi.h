@@ -1231,5 +1231,272 @@ typedef struct UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL {
     UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL_OPEN_VOLUME OpenVolume;
 } UEFI_SIMPLE_FILE_SYSTEM_PROTOCOL;
 
+/******************************************************************************
+UEFI DISK I/O PROTOCOLS (UEFI Specification v2.10 13.7 - 13.8)
+******************************************************************************/
+
+// Forward declaration because of circular dependencies.
+typedef struct UEFI_DISK_IO_PROTOCOL UEFI_DISK_IO_PROTOCOL;
+
+/* UEFI Specification v2.10 13.7.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_DISK_READ) (
+    IN UEFI_DISK_IO_PROTOCOL* This,
+    IN uint32_t               MediaId,
+    IN uint64_t               Offset,
+    IN uint64_t               BufferSize,
+    OUT void*                 Buffer
+);
+
+/* UEFI Specification v2.10 13.7.3 */
+typedef UEFI_STATUS (UEFI_API* UEFI_DISK_WRITE) (
+    IN UEFI_DISK_IO_PROTOCOL* This,
+    IN uint32_t               MediaId,
+    IN uint64_t               Offset,
+    IN uint64_t               BufferSize,
+    IN void*                  Buffer
+);
+
+/* UEFI Specification v2.10 13.7.1 */
+#define UEFI_DISK_IO_PROTOCOL_GUID \
+{0xCE345171, 0xBA0B, 0x11d2, 0x8e, 0x4F, {0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}}
+
+#define UEFI_DISK_IO_PROTOCOL_REVISION 0x00010000
+
+typedef struct UEFI_DISK_IO_PROTOCOL {
+    uint64_t        Revision;
+    UEFI_DISK_READ  ReadDisk;
+    UEFI_DISK_WRITE WriteDisk;
+} UEFI_DISK_IO_PROTOCOL;
+
+// Forward declaration because of circular dependencies.
+typedef struct UEFI_DISK_IO2_PROTOCOL UEFI_DISK_IO2_PROTOCOL;
+
+/* UEFI Specification v2.10 13.8.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_DISK_CANCEL_EX) (
+    IN UEFI_DISK_IO2_PROTOCOL* This
+);
+
+/* UEFI Specification v2.10 13.8.3 */
+typedef struct {
+    UEFI_EVENT  Event;
+    UEFI_STATUS TransactionStatus;
+} UEFI_DISK_IO2_TOKEN;
+
+typedef UEFI_STATUS (UEFI_API *UEFI_DISK_READ_EX) (
+    IN UEFI_DISK_IO2_PROTOCOL*  This,
+    IN uint32_t                 MediaId,
+    IN uint64_t                 Offset,
+    IN OUT UEFI_DISK_IO2_TOKEN* Token,
+    IN uint64_t                 BufferSize,
+    OUT void*                   Buffer
+);
+
+/* UEFI Specification v2.10 13.8.4 */
+typedef UEFI_STATUS (UEFI_API *UEFI_DISK_WRITE_EX) (
+    IN UEFI_DISK_IO2_PROTOCOL*  This,
+    IN uint32_t                 MediaId,
+    IN uint64_t                 Offset,
+    IN OUT UEFI_DISK_IO2_TOKEN* Token,
+    IN uint64_t                 BufferSize,
+    IN void*                    Buffer
+);
+
+/* UEFI Specification v2.10 13.8.5 */
+typedef UEFI_STATUS (UEFI_API *UEFI_DISK_FLUSH_EX) (
+    IN UEFI_DISK_IO2_PROTOCOL*  This,
+    IN OUT UEFI_DISK_IO2_TOKEN* Token
+);
+
+/* UEFI Specification v2.10 13.8.1 */
+#define UEFI_DISK_IO2_PROTOCOL_GUID \
+{0x151c8eae, 0x7f2c, 0x472c, 0x9e, 0x54, {0x98, 0x28, 0x19, 0x4f, 0x6a, 0x88}}
+
+#define UEFI_DISK_IO2_PROTOCOL_REVISION 0x00020000
+
+typedef struct UEFI_DISK_IO2_PROTOCOL {
+    uint64_t            Revision;
+    UEFI_DISK_CANCEL_EX Cancel;
+    UEFI_DISK_READ_EX   ReadDiskEx;
+    UEFI_DISK_WRITE_EX  WriteDiskEx;
+    UEFI_DISK_FLUSH_EX  FlushDiskEx;
+} UEFI_DISK_IO2_PROTOCOL;
+
+/******************************************************************************
+UEFI BLOCK I/O PROTOCOLS (UEFI Specification v2.10 13.9 - 13.10)
+******************************************************************************/
+
+// Forward declaration because of circular dependencies.
+typedef struct UEFI_BLOCK_IO_PROTOCOL UEFI_BLOCK_IO_PROTOCOL;
+
+/* UEFI Specification v2.10 13.9.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_BLOCK_RESET) (
+    IN UEFI_BLOCK_IO_PROTOCOL* This,
+    IN uint8_t                 ExtendedVerification
+);
+
+/* UEFI Specification v2.10 13.9.3 */
+typedef UEFI_STATUS (UEFI_API* UEFI_BLOCK_READ) (
+    IN UEFI_BLOCK_IO_PROTOCOL* This,
+    IN uint32_t                MediaId,
+    IN UEFI_LBA                LBA,
+    IN uint64_t                BufferSize,
+    OUT void*                  Buffer
+);
+
+/* UEFI Specification v2.10 13.9.4 */
+typedef UEFI_STATUS (UEFI_API* UEFI_BLOCK_WRITE) (
+    IN UEFI_BLOCK_IO_PROTOCOL* This,
+    IN uint32_t                MediaId,
+    IN UEFI_LBA                LBA,
+    IN uint64_t                BufferSize,
+    IN void*                   Buffer
+);
+
+/* UEFI Specification v2.10 13.9.5 */
+typedef UEFI_STATUS (UEFI_API* UEFI_BLOCK_FLUSH) (
+    IN UEFI_BLOCK_IO_PROTOCOL* This
+);
+
+/* UEFI Specification v2.10 13.9.1 */
+#define UEFI_BLOCK_IO_PROTOCOL_GUID \
+{0x964e5b21, 0x6459, 0x11d2, 0x8e, 0x39, {0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}}
+
+#define UEFI_BLOCK_IO_PROTOCOL_REVISION2 0x00020001
+#define UEFI_BLOCK_IO_PROTOCOL_REVISION3 ((2<<16) | (31))
+
+typedef uint64_t UEFI_LBA;
+
+typedef struct {
+    uint64_t MediaId;
+    uint8_t  RemovableMedia;
+    uint8_t  MediaPresent;
+    uint8_t  LogicalPartition;
+    uint8_t  ReadOnly;
+    uint8_t  WriteCaching;
+    uint32_t BlockSize;
+    uint32_t IoAlign;
+    UEFI_LBA LastBlock;
+    UEFI_LBA LowestAlignedLba;
+    uint32_t LogicalBlocksPerPhysicalBlock;
+    uint32_t OptimalTransferLengthGranularity;
+} UEFI_BLOCK_IO_MEDIA;
+
+typedef struct UEFI_BLOCK_IO_PROTOCOL {
+    uint64_t            Revision;
+    UEFI_BLOCK_IO_MEDIA *Media;
+    UEFI_BLOCK_RESET    Reset;
+    UEFI_BLOCK_READ     ReadBlocks;
+    UEFI_BLOCK_WRITE    WriteBlocks;
+    UEFI_BLOCK_FLUSH    FlushBlocks;
+} UEFI_BLOCK_IO_PROTOCOL;
+
+// Forward declaration because of circular dependencies.
+typedef struct UEFI_BLOCK_IO2_PROTOCOL UEFI_BLOCK_IO2_PROTOCOL;
+
+/* UEFI Specification v2.10 13.10.2 */
+typedef UEFI_STATUS (UEFI_API* UEFI_BLOCK_RESET_EX) (
+    IN UEFI_BLOCK_IO2_PROTOCOL* This,
+    IN uint8_t                  ExtendedVerification
+);
+
+/* UEFI Specification v2.10 13.10.3 */
+typedef struct {
+    UEFI_EVENT  Event;
+    UEFI_STATUS TransactionStatus;
+} UEFI_BLOCK_IO2_TOKEN;
+
+typedef UEFI_STATUS (UEFI_API* UEFI_BLOCK_READ_EX) (
+    IN UEFI_BLOCK_IO2_PROTOCOL*  This,
+    IN uint32_t                  MediaID,
+    IN UEFI_LBA                  LBA,
+    IN OUT UEFI_BLOCK_IO2_TOKEN* Token,
+    IN uint64_t                  BufferSize,
+    OUT void*                    Buffer
+);
+
+/* UEFI Specification v2.10 13.10.4 */
+typedef UEFI_STATUS (UEFI_API* UEFI_BLOCK_WRITE_EX) (
+    IN UEFI_BLOCK_IO2_PROTOCOL*  This,
+    IN uint32_t                  MediaID,
+    IN UEFI_LBA                  LBA,
+    IN OUT UEFI_BLOCK_IO2_TOKEN* Token,
+    IN uint64_t                  BufferSize,
+    IN void*                     Buffer
+);
+
+/* UEFI Specification v2.10 13.10.5 */
+typedef UEFI_STATUS (UEFI_API* UEFI_BLOCK_FLUSH_EX) (
+    IN UEFI_BLOCK_IO2_PROTOCOL*  This,
+    IN OUT UEFI_BLOCK_IO2_TOKEN* Token
+);
+
+/* UEFI Specification v2.10 13.10.1 */
+#define EFI_BLOCK_IO2_PROTOCOL_GUID \
+{0xa77b2472, 0xe282, 0x4e9f, 0xa2, 0x45, {0xc2, 0xc0, 0xe2, 0x7b, 0xbc, 0xc1}}
+
+typedef struct UEFI_BLOCK_IO2_PROTOCOL {
+    UEFI_BLOCK_IO_MEDIA* Media;
+    UEFI_BLOCK_RESET_EX  Reset;
+    UEFI_BLOCK_READ_EX   ReadBlocksEx;
+    UEFI_BLOCK_WRITE_EX  WriteBlocksEx;
+    UEFI_BLOCK_FLUSH_EX  FlushBlocksEx;
+} UEFI_BLOCK_IO2_PROTOCOL;
+
+/******************************************************************************
+UEFI GUID PARTITION TABLE (GPT) DISK LAYOUT (UEFI Specification v2.10 5)
+******************************************************************************/
+
+typedef struct {
+    uint8_t BootIndicator;
+    uint8_t StartHead;
+    uint8_t StartSector;
+    uint8_t StartTrack;
+    uint8_t OSIndicator;
+    uint8_t EndHead;
+    uint8_t EndSector;
+    uint8_t EndTrack;
+    uint8_t StartingLBA[4];
+    uint8_t SizeInLBA[4];
+} __attribute__((packed)) MBR_PARTITION_RECORD;
+
+typedef struct {
+    uint8_t              BootStrapCode[440];
+    uint8_t              UniqueMbrSignature[4];
+    uint8_t              Unknown[2];
+    MBR_PARTITION_RECORD Partition[4];
+    uint16_t             Signature;
+} __attribute__((packed)) MASTER_BOOT_RECORD;
+
+typedef struct {
+    UEFI_GUID PartitionTypeGUID;
+    UEFI_GUID UniquePartitionGUID;
+    UEFI_LBA  StartingLBA;
+    UEFI_LBA  EndingLBA;
+    uint64_t  Attributes;
+    char16_t  PartitionName[36];
+}  __attribute__((packed)) EFI_PARTITION_ENTRY;
+
+/******************************************************************************
+UEFI PARTITION INFORMATION PROTOCOL (UEFI Specification v2.10 13.18)
+******************************************************************************/
+#define UEFI_PARTITION_INFO_PROTOCOL_GUID \
+{0x8cf2f62c, 0xbc9b, 0x4821, 0x80, 0x8d, {0xec, 0x9e, 0xc4, 0x21, 0xa1, 0xa0}}
+
+#define UEFI_PARTITION_INFO_PROTOCOL_REVISION 0x0001000
+#define PARTITION_TYPE_OTHER                  0x00
+#define PARTITION_TYPE_MBR                    0x01
+#define PARTITION_TYPE_GPT                    0x02
+
+typedef struct {
+    uint32_t Revision;
+    uint32_t Type;
+    uint8_t  System;
+    uint8_t  Reserved[7];
+    union {
+        MBR_PARTITION_RECORD Mbr;
+        EFI_PARTITION_ENTRY  Gpt;
+    } Info;
+} __attribute__((packed)) UEFI_PARTITION_INFO_PROTOCOL;
+
 #endif
 /* END OF UEFI.H */
