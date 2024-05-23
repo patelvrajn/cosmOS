@@ -24,7 +24,8 @@ mount /dev/loop69 mount_point69
 
 # Copy over bootloader and kernel image to EFI/BOOT.
 mkdir -p mount_point69/EFI/BOOT
-cp BOOTX64.EFI mount_point69/EFI/BOOT
+cp bootloader/BOOTX64.EFI mount_point69/EFI/BOOT
+cp kernel/kernel.bin mount_point69/EFI/BOOT
 
 # Unmount and remove directory.
 umount mount_point69
