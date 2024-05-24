@@ -1,9 +1,11 @@
 .PHONY: all clean
 
 all:
-	cd kernel; \
+	cd bootloader; \
+	make clean; \
 	make; \
-	cd ../bootloader; \
+	cd ../kernel; \
+	make clean; \
 	make; \
 	cd ..; \
 	find . -name "*.img" -type f -delete; \
@@ -15,3 +17,4 @@ clean:
 	find . -name "*.bin" -type f -delete
 	find . -name "*.EFI" -type f -delete
 	find . -name "*.img" -type f -delete
+
