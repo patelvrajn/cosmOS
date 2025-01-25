@@ -47,7 +47,10 @@ CXXFLAGS = \
 	       -mno-red-zone \
 	       -fpie \
 		   -pie \
-	       -ffreestanding
+		   -ffreestanding \
+		   -fno-stack-check \
+		   -fno-stack-protector \
+		   -mno-stack-arg-probe
 
 .PHONY: all clean
 
@@ -61,7 +64,7 @@ clean:
 
 # Bootloader target depends on the bootloader objects and the shared objects.
 $(bootloader_target) : $(bootloader_objs) $(shared_objs)
-	$(CXX) $(CXXFLAGS) -e uefi_main $^ -o $@ 
+	$(CXX) $(CXXFLAGS) -e uefi_main $^ -o $@
 
 # An object file depends on the respective cpp file.
 %.o: %.cpp

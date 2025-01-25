@@ -45,7 +45,10 @@ CXXFLAGS = \
 	       -mno-red-zone \
 		   -fpie \
 	       -pie \
-	       -ffreestanding
+	       -ffreestanding \
+		   -fno-stack-check \
+		   -fno-stack-protector \
+		   -mno-stack-arg-probe
 
 .PHONY: all clean
 
@@ -59,7 +62,7 @@ clean:
 
 # Kernel target depends on the kernel objects and the shared objects.
 $(kernel_target) : $(kernel_objs) $(shared_objs)
-	$(CXX) $(CXXFLAGS) -e kernel_main $^ -o $@ 
+	$(CXX) $(CXXFLAGS) -e kernel_main $^ -o $@
 
 # An object file depends on the respective cpp file.
 %.o: %.cpp

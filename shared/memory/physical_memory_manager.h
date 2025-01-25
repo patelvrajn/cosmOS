@@ -1,0 +1,62 @@
+#pragma once
+#include <stdint.h>
+#include "../uefi/uefi_memory_map.h"
+#include "..//graphics/fonts/pc_screen_font_v1_renderer.h"
+
+enum pmm_red_black_tree_color {
+    black = 0,
+    red   = 1
+};
+
+typedef struct {
+    pmm_red_black_tree_color red_black_tree_color : 1;
+    uint64_t                 is_allocated         : 1;
+    uint64_t                 reserved             : 1;                       
+    uint64_t                 aligned_size         : 61;
+} physical_memory_size_and_flags;
+
+typedef struct {
+    physical_memory_size_and_flags size_and_flags;
+    uint64_t                       address_of_parent;
+    uint64_t                       address_of_left_child;
+    uint64_t                       address_of_right_child;
+} physical_memory_free_header;
+
+typedef struct {
+    physical_memory_size_and_flags size_and_flags;
+} physical_memory_allocated_header;
+
+typedef struct {
+    physical_memory_size_and_flags size_and_flags;
+} physical_memory_boundary_tag;
+
+class Physical_Memory_Manager {
+
+    public:
+
+        Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC_Screen_Font_v1_Renderer* font_renderer);
+
+    private:
+
+        // Pointer to the root of the red-black tree.
+        void* pmm_red_black_tree_root;
+        void* pmm_red_black_tree_null;
+
+        UEFI_MEMORY_DESCRIPTOR* unusable_mem_descriptors;
+        uint64_t unusable_mem_descriptors_max_idx = 0;
+
+        void  pmm_red_black_tree_rotate_left   (void* x);
+        void  pmm_red_black_tree_rotate_right  (void* y);
+        void* pmm_red_black_tree_find_best_fit (uint64_t value);
+        void  pmm_red_black_tree_insert        (void* z);
+        void  pmm_red_black_tree_insert_fixup  (void* z);
+        void  pmm_red_black_tree_transplant    (void* u, void* v);
+        void* pmm_red_black_tree_minimum       (void* x);
+        void  pmm_red_black_tree_delete        (void* z);
+        void  pmm_red_black_tree_delete_fixup  (void* x);
+
+        bool Is_Physical_Memory_Region_Usable (UEFI_MEMORY_TYPE mem_type);
+        bool Is_Physical_Memory_Region_Unusable (void* addr);
+        uint64_t Get_Last_Address_in_Unusable_Memory_Region (void* addr);
+
+};

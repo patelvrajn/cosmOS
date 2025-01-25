@@ -27,6 +27,9 @@ mkdir -p mount_point69/EFI/BOOT
 cp bootloader/BOOTX64.EFI mount_point69/EFI/BOOT
 cp kernel/kernel.bin mount_point69/EFI/BOOT
 
+# Copy over font file to EFI/BOOT.
+cp shared/graphics/fonts/zap-ext-light16.psf mount_point69/EFI/BOOT
+
 # Unmount and remove directory.
 umount mount_point69
 rmdir mount_point69

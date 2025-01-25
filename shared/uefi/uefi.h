@@ -213,11 +213,11 @@ typedef struct {
 } UEFI_MEMORY_DESCRIPTOR;
 
 typedef UEFI_STATUS (UEFI_API* UEFI_GET_MEMORY_MAP) (
-    IN OUT uint64_t* MemoryMapSize,
+    IN OUT uint64_t*            MemoryMapSize,
     OUT UEFI_MEMORY_DESCRIPTOR* MemoryMap,
-    OUT uint64_t* MapKey,
-    OUT uint64_t* DescriptorSize,
-    OUT uint32_t* DescriptorVersion
+    OUT uint64_t*               MapKey,
+    OUT uint64_t*               DescriptorSize,
+    OUT uint32_t*               DescriptorVersion
 );
 
 /* UEFI Specification v2.10 7.2.4 */
@@ -872,6 +872,12 @@ UEFI STATUSES
 #define UEFI_ERROR_BIT       0x8000000000000000
 #define UEFI_ENCODE_ERROR(x) (UEFI_ERROR_BIT | (x))
 #define UEFI_IS_ERROR(x)     ((int64_t)((uint64_t)(x)) < 0) // Convert error to 64 bit signed and check sign bit.
+
+#define UEFI_PRINT_ERROR(SystemTable, Status, ErrorString) \
+  if (UEFI_IS_ERROR(status)) { \
+    uefi_printf (SystemTable, u"UEFI Error %h : %s.\r\nPrint any key to continue...\r\n", Status, ErrorString); \
+    uefi_wait_for_keystroke (SystemTable); \
+  }
 
 /* UEFI Warning Statuses UEFI Specification v2.10 Appendix D */
 #define UEFI_WARN_UNKNOWN_GLYPH    1

@@ -23,6 +23,12 @@ template <typename T> void uefi_print_number (UEFI_SYSTEM_TABLE* SystemTable, T 
         number /= base;
     } while (number > 0);
 
+    // Append 0x for hexadecimal numbers.
+    if (base == 16) {
+        charbuffer[i++] = 'x';
+        charbuffer[i++] = '0';
+    }
+
     // Append the negative sign if negative.
     if (isNegative) charbuffer[i++] = u'-';
 
@@ -67,11 +73,10 @@ void uefi_printf (UEFI_SYSTEM_TABLE* SystemTable, char16_t* unformatted_string, 
 
                 } break;
 
-                /*Case %d : Int32*/
                 case 'i': {
 
-                    int32_t number = va_arg(v_args, int32_t);
-                    uefi_print_number<int32_t>(SystemTable, number, 10);
+                    int64_t number = va_arg(v_args, int64_t);
+                    uefi_print_number<int64_t>(SystemTable, number, 10);
 
                 } break;
 
@@ -79,6 +84,13 @@ void uefi_printf (UEFI_SYSTEM_TABLE* SystemTable, char16_t* unformatted_string, 
 
                     uint64_t number = va_arg(v_args, uint64_t);
                     uefi_print_number<uint64_t>(SystemTable, number, 10);
+
+                } break;
+
+                case 'h': {
+
+                    uint64_t number = va_arg(v_args, uint64_t);
+                    uefi_print_number<uint64_t>(SystemTable, number, 16);
 
                 } break;
 
