@@ -36,3 +36,7 @@ rmdir mount_point69
 
 # Deattach the loopback device.
 losetup -d /dev/loop69
+
+# Change ownership of file to current user instead of superuser.
+sudo chown patelvrajn cosmos.img
+

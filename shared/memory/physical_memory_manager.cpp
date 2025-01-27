@@ -553,10 +553,6 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
     address. */
     uint64_t maximum_usable_memory_region_address = 0;
 
-    // DEBUGGING STATEMENT
-    // font_renderer->print_string(0xFFFFFFFF, "Hello World", 10, 10);
-    // while(1);
-
     // Loop thru the memory map.
     for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
 
@@ -654,6 +650,11 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
 
         }
     }
+
+    // DEBUGGING STATEMENT
+    font_renderer->print_string(0xFFFFFFFF, "Hello World", 10, 10);
+    while(1);
+
 }
 
 /******************************************************************************* 

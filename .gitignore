@@ -2,4 +2,6 @@
 *.o
 *.EFI
 *.bin
+*.elf
 *.img
+ovmf/

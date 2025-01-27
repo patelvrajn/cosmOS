@@ -1,0 +1,74 @@
+# Recursive wildcard make function; recursively searches for files matching 
+# given wildcard pattern.
+rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
+
+# Source files (*.cpp)
+shared_srcs = $(call rwildcard,../shared,*.cpp)
+kernel_srcs = $(call rwildcard,../kernel,*.cpp)
+
+# Object files (*.o)
+shared_objs = $(patsubst %.cpp,%.o,$(shared_srcs))
+kernel_objs = $(patsubst %.cpp,%.o,$(kernel_srcs))
+
+# Dependency information files (*.d)
+shared_depends = $(patsubst %.cpp,%.d,$(shared_srcs))
+kernel_depends = $(patsubst %.cpp,%.d,$(kernel_srcs))
+
+# Project targets
+kernel_target = kernel.elf
+
+###############################################################################
+# Compiler and Compiler Flags                                                 #
+###############################################################################
+# -nostdlib                  = Prevent linking to standard libraries.
+# -03                        = Optimization level 3 (highest)
+# -MMD -MP                   = Dump dependency information for each compiled 
+#                              .cpp for future makes.
+# -Wall, -Wextra, -Wpedantic = Verbose warnings.
+# -mno-red-zone              = Compile and generate machine code such that 
+#                              there is no assumed red zone below the stack.
+# -fpie -pie                 = Generate code independent of where the machine 
+#                              code is placed in memory.                      
+# -ffreestanding             = Generate code independent of the host platform 
+#                              and assume standard libraries don't exist.     
+###############################################################################
+CXX      = x86_64-elf-g++
+CXXFLAGS = \
+		   -g \
+		   -Wl,-Tkernel.ld \
+	       -nostdlib \
+	       -O3 \
+	       -MMD \
+	       -MP \
+	       -Wall \
+	       -Wextra \
+	       -Wpedantic \
+	       -mno-red-zone \
+		   -fpie \
+	       -pie \
+	       -ffreestanding \
+		   -fno-stack-check \
+		   -fno-stack-protector \
+		   -mno-stack-arg-probe
+
+.PHONY: all clean
+
+all: $(kernel_target)
+
+# Clean compile outputs from last make.
+clean:
+	find .. -name "*.d" -type f -delete
+	find .. -name "*.o" -type f -delete
+	find .. -name "*.elf" -type f -delete
+
+# Kernel target depends on the kernel objects and the shared objects.
+$(kernel_target) : $(kernel_objs) $(shared_objs)
+	$(CXX) $(CXXFLAGS) -e kernel_main $^ -o $@
+
+# An object file depends on the respective cpp file.
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@ -c
+
+# Include dependency rules output from previous make.
+-include $(shared_depends)
+-include $(kernel_depends)
