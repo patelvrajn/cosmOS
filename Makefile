@@ -12,7 +12,7 @@ all: ovmf/ovmf-vars-x86_64.fd ovmf/ovmf-code-x86_64.fd
 	cd ..; \
 	find . -name "*.img" -type f -delete; \
 	sudo ./Make_Image.sh \  
-	sudo ./Run_Image.sh
+	./Run_Image.sh
 
 ovmf/ovmf-vars-x86_64.fd:
 	mkdir -p ovmf

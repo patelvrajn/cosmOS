@@ -480,9 +480,9 @@ void Physical_Memory_Manager::pmm_red_black_tree_delete_fixup (void* x) {
 }
 
 /*******************************************************************************
-Is the Memory Region described in the UEFI Memory Map Usable by the OS?
+Is the Memory Region Type described in the UEFI Memory Map Usable by the OS?
 *******************************************************************************/
-bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (UEFI_MEMORY_TYPE mem_type) {
+bool Physical_Memory_Manager::Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY_TYPE mem_type) {
 
     // return ((mem_type == UEFI_MEMORY_TYPE::UefiLoaderCode)         || 
     //         (mem_type == UEFI_MEMORY_TYPE::UefiLoaderData)         ||
@@ -496,38 +496,48 @@ bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (UEFI_MEMORY_TYPE
             (mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory) ||
             (mem_type == UEFI_MEMORY_TYPE::UefiPersistentMemory)); 
 
-    // return (mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory);
-
 }
 
-bool Physical_Memory_Manager::Is_Physical_Memory_Region_Unusable (void* addr) {
+bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (Memory_Map_Info* mmap_info, void* addr) {
 
-    for (uint64_t idx = 0; idx <= unusable_mem_descriptors_max_idx; idx++) {
+    // Calculate the number of memory map entries.
+    uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
 
-        uint64_t unusable_memory_last_address = unusable_mem_descriptors[idx].PhysicalStart + (unusable_mem_descriptors[idx].NumberOfPages * PMM_FRAME_SIZE);
+    // Loop thru the memory map.
+    for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
 
-        if ((((uint64_t)addr) >= unusable_mem_descriptors[idx].PhysicalStart) &&
-            (((uint64_t)addr) < unusable_memory_last_address)) {
+        /* Pointer arithmetic to point to an entry in the memory map using the
+        given size of the memory descriptors. */
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
 
-            return true;
-   
+        if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) <= (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
+
+            UEFI_MEMORY_TYPE mem_type = ((UEFI_MEMORY_TYPE)mem_desc->Type);
+
+            return Is_Physical_Memory_Region_Type_Usable(mem_type);
+
         }
     }
 
     return false;
 }
 
-uint64_t Physical_Memory_Manager::Get_Last_Address_in_Unusable_Memory_Region (void* addr) {
+uint64_t Physical_Memory_Manager::Get_Last_Address_in_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
 
-    for (uint64_t idx = 0; idx <= unusable_mem_descriptors_max_idx; idx++) {
+    // Calculate the number of memory map entries.
+    uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
 
-        uint64_t unusable_memory_last_address = unusable_mem_descriptors[idx].PhysicalStart + (unusable_mem_descriptors[idx].NumberOfPages * PMM_FRAME_SIZE);
+    // Loop thru the memory map.
+    for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
 
-        if ((((uint64_t)addr) >= unusable_mem_descriptors[idx].PhysicalStart) &&
-            (((uint64_t)addr) < unusable_memory_last_address)) {
+        /* Pointer arithmetic to point to an entry in the memory map using the
+        given size of the memory descriptors. */
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
 
-            return unusable_memory_last_address - 1;
-   
+        if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) <= (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
+
+            return (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE));
+
         }
     }
 
@@ -544,11 +554,6 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
     // Calculate the number of memory map entries.
     uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
 
-    /* Initialize variables to store the descriptors of unusable memory and the
-    count of unusable memory regions. */
-    UEFI_MEMORY_DESCRIPTOR unusable_mem_desc_arr[num_of_mem_map_entries];
-    uint64_t unusable_mem_desc_arr_idx = 0;
-
     /* Initialize variables to store the usable memory region with the largest 
     address. */
     uint64_t maximum_usable_memory_region_address = 0;
@@ -560,8 +565,10 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
         given size of the memory descriptors. */
         UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
 
+        UEFI_MEMORY_TYPE mem_type = ((UEFI_MEMORY_TYPE)mem_desc->Type);
+
         // Is the memory in this memory map entry a usable region?
-        if (Is_Physical_Memory_Region_Usable((UEFI_MEMORY_TYPE)mem_desc->Type))
+        if (Is_Physical_Memory_Region_Type_Usable(mem_type))
         {
 
             /* Keep an account of the usable memory region with the largest 
@@ -589,31 +596,19 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
             physical_memory_boundary_tag boundary_tag;
             boundary_tag.size_and_flags = size_and_flags;
             *((physical_memory_boundary_tag*)(((uint8_t*)usable_memory) + (mem_desc->NumberOfPages * PMM_FRAME_SIZE) - sizeof(physical_memory_boundary_tag))) = boundary_tag;
-
-        // Memory region is unusable.
-        } else { 
-
-            // Add memory descriptors to array of unusable memory descriptors.
-            unusable_mem_desc_arr[unusable_mem_desc_arr_idx] = *mem_desc;
-            unusable_mem_desc_arr_idx++;
-
         }
     }
 
-    unusable_mem_descriptors         = unusable_mem_desc_arr;
-    unusable_mem_descriptors_max_idx = unusable_mem_desc_arr_idx;
+    // DEBUGGING STATEMENT
+    font_renderer->print_string(0xFFFFFFFF, "Hello World", 10, 10);
+    while(1);
 
     // Start from the start of memory.
     void* current_memory = (void*)0;
 
     while (((uint64_t)current_memory) <= maximum_usable_memory_region_address) {
 
-        // Is current memory unusable? If so, index to next memory region.
-        if (Is_Physical_Memory_Region_Unusable(current_memory)) {
-
-            current_memory = (void*)(Get_Last_Address_in_Unusable_Memory_Region(current_memory) + 1);
-
-        } else {
+        if (Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) {
 
             // Remember the address of the first usable memory region.
             void* first_usable_memory_addr = current_memory;
@@ -621,7 +616,7 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
             /* Traverse forward into memory until an unusable memory region is 
             found or the last usable memory region is reached. */
             uint64_t accumulated_memory_size = 0;
-            while ((!Is_Physical_Memory_Region_Unusable(current_memory)) && 
+            while ((Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) && 
                   (((uint64_t)current_memory) <= maximum_usable_memory_region_address)) {
                 
                 /* Accumulate total size of usable memory region; adding back 
@@ -648,13 +643,13 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
             // Insert the free coalesced memory region into the red-black tree.
             pmm_red_black_tree_insert(first_usable_memory_addr);
 
+        // Current memory is unusable, index to the next memory region.
+        } else {
+
+            current_memory = (void*)(Get_Last_Address_in_Memory_Region(mmap_info, current_memory) + 1);
+
         }
     }
-
-    // DEBUGGING STATEMENT
-    font_renderer->print_string(0xFFFFFFFF, "Hello World", 10, 10);
-    while(1);
-
 }
 
 /******************************************************************************* 

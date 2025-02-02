@@ -11,5 +11,5 @@ typedef struct {
 
 UEFI_STATUS uefi_get_memory_map (
     UEFI_SYSTEM_TABLE* SystemTable, 
-    Memory_Map_Info*   mmap
+    Memory_Map_Info&   mmap
 );

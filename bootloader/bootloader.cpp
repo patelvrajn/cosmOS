@@ -262,19 +262,23 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
     for access to framebuffer.*/
     Kernel_Handover* k;
     k->gop = *gop->Mode;
-    uefi_get_memory_map (SystemTable, &k->memory_map);
+    uefi_get_memory_map (SystemTable, k->memory_map);
 
-    PC_Screen_Font_v1_Renderer* font_renderer;
-    *font_renderer = PC_Screen_Font_v1_Renderer(ImageHandle, SystemTable, u"\\EFI\\BOOT\\zap-ext-light16.psf", k->gop, 16);
-    k->font_renderer = font_renderer;
+    PC_Screen_Font_v1_Renderer font_renderer(ImageHandle, SystemTable, u"\\EFI\\BOOT\\zap-ext-light16.psf", k->gop, 16);
+    k->font_renderer = &font_renderer;
 
-    // Exit UEFI boot services.
-    SystemTable->BootServices->ExitBootServices(ImageHandle, k->memory_map.key);
-
+    uint64_t num_of_mem_map_entries = k->memory_map.size / k->memory_map.desc_size;
+    uefi_printf(SystemTable, u"1:Number of memory map entries: %u\r\n", num_of_mem_map_entries);
+    
     /* Establish a function pointer pointing to the kinary binary's executable
     code. */
     void UEFI_API (*entry_point)(Kernel_Handover*) = NULL;
     *(void **)&entry_point = kernel_buffer; 
+
+    uefi_printf(SystemTable, u"Address of Entry Point: %h\r\n", entry_point);
+
+    // Exit UEFI boot services.
+    SystemTable->BootServices->ExitBootServices(ImageHandle, k->memory_map.key);
 
     /* Call the kernel's entry point to turn control over to the operating 
     system. */

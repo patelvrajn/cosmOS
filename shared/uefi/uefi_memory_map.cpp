@@ -4,7 +4,7 @@
 
 UEFI_STATUS uefi_get_memory_map (
     UEFI_SYSTEM_TABLE* SystemTable, 
-    Memory_Map_Info*   mmap
+    Memory_Map_Info&   mmap
 ) {
 
     uint64_t                MemoryMapSize     = 0;
@@ -35,11 +35,14 @@ UEFI_STATUS uefi_get_memory_map (
 
     UEFI_PRINT_ERROR(SystemTable, status, u"Could not obtain memory map!");
 
-    mmap->size         = MemoryMapSize;
-    mmap->map          = MemoryMap;
-    mmap->key          = MapKey;
-    mmap->desc_size    = DescriptorSize;
-    mmap->desc_version = DescriptorVersion;
+    mmap.size         = MemoryMapSize;
+    mmap.map          = MemoryMap;
+    mmap.key          = MapKey;
+    mmap.desc_size    = DescriptorSize;
+    mmap.desc_version = DescriptorVersion;
+
+    uint64_t num_of_mem_map_entries = mmap.size / mmap.desc_size;
+    uefi_printf(SystemTable, u"0:Number of memory map entries: %u\r\n", num_of_mem_map_entries);
 
     return UEFI_SUCCESS;
 
