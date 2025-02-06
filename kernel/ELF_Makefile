@@ -37,7 +37,7 @@ CXXFLAGS = \
 		   -g \
 		   -Wl,-Tkernel.ld \
 	       -nostdlib \
-	       -Og \
+	       -O0 \
 	       -MMD \
 	       -MP \
 	       -Wall \

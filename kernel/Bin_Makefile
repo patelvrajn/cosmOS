@@ -36,7 +36,7 @@ CXX      = x86_64-elf-g++
 CXXFLAGS = \
 		   -Wl,--oformat=binary,-Tkernel.ld \
 	       -nostdlib \
-	       -Og \
+	       -O0 \
 	       -MMD \
 	       -MP \
 	       -Wall \

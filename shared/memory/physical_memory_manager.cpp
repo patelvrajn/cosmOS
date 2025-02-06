@@ -4,8 +4,8 @@
 // Input p is a void*.
 #define PMM_PHYSICAL_ADDRESS_BYTE_ALIGNMENT_BITS  3
 #define PMM_PHYSICAL_ADDRESS_FRAME_ALIGNMENT_BITS 12
-#define PMM_BYTE_SIZE                             2^PMM_PHYSICAL_ADDRESS_BYTE_ALIGNMENT_BITS
-#define PMM_FRAME_SIZE                            2^PMM_PHYSICAL_ADDRESS_FRAME_ALIGNMENT_BITS
+#define PMM_BYTE_SIZE                             8 // (2^PMM_PHYSICAL_ADDRESS_BYTE_ALIGNMENT_BITS)
+#define PMM_FRAME_SIZE                            4096 // (2^PMM_PHYSICAL_ADDRESS_FRAME_ALIGNMENT_BITS)
 #define PMM_IS_ALLOCATED_MEMORY_FLAG(p)           ((physical_memory_size_and_flags*)(p))->is_allocated
 #define PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)     ((physical_memory_free_header*)(p))
 #define PMM_RED_BLACK_TREE_KEY_VALUE(p)           (((uint64_t)(*((physical_memory_size_and_flags*)(p))).aligned_size) << PMM_PHYSICAL_ADDRESS_BYTE_ALIGNMENT_BITS)
@@ -484,13 +484,8 @@ Is the Memory Region Type described in the UEFI Memory Map Usable by the OS?
 *******************************************************************************/
 bool Physical_Memory_Manager::Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY_TYPE mem_type) {
 
-    // return ((mem_type == UEFI_MEMORY_TYPE::UefiLoaderCode)         || 
-    //         (mem_type == UEFI_MEMORY_TYPE::UefiLoaderData)         ||
-    //         (mem_type == UEFI_MEMORY_TYPE::UefiBootServicesCode)   ||
-    //         (mem_type == UEFI_MEMORY_TYPE::UefiBootServicesData)   ||
-    //         (mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory) ||
-    //         (mem_type == UEFI_MEMORY_TYPE::UefiPersistentMemory)); 
-
+    /* Do not use UefiLoaderCode or UefiLoaderData as the operating system's 
+    code maybe allocated to that type of memory. */
     return ((mem_type == UEFI_MEMORY_TYPE::UefiBootServicesCode)   ||
             (mem_type == UEFI_MEMORY_TYPE::UefiBootServicesData)   ||
             (mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory) ||
@@ -544,19 +539,10 @@ uint64_t Physical_Memory_Manager::Get_Last_Address_in_Memory_Region (Memory_Map_
     return 0;
 }
 
-/******************************************************************************* 
-Initialize Physical Memory Manager Function (Constructor)
-Read memory map passed from UEFI bootloader and insert free regions into red-
-black tree.
-*******************************************************************************/
-Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC_Screen_Font_v1_Renderer* font_renderer) {
+uint64_t Physical_Memory_Manager::Get_Size_of_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
 
     // Calculate the number of memory map entries.
     uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
-
-    /* Initialize variables to store the usable memory region with the largest 
-    address. */
-    uint64_t maximum_usable_memory_region_address = 0;
 
     // Loop thru the memory map.
     for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
@@ -565,37 +551,112 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
         given size of the memory descriptors. */
         UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
 
-        UEFI_MEMORY_TYPE mem_type = ((UEFI_MEMORY_TYPE)mem_desc->Type);
+        if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) <= (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
 
-        // Is the memory in this memory map entry a usable region?
-        if (Is_Physical_Memory_Region_Type_Usable(mem_type))
-        {
+            return (mem_desc->NumberOfPages * PMM_FRAME_SIZE);
 
-            /* Keep an account of the usable memory region with the largest 
-            address. */
-            if (mem_desc->PhysicalStart > maximum_usable_memory_region_address) {
-                maximum_usable_memory_region_address = mem_desc->PhysicalStart;
+        }
+    }
+
+    return 0;
+}
+
+uint64_t Physical_Memory_Manager::Get_Last_Address_in_Memory (Memory_Map_Info* mmap_info) {
+
+    // Calculate the number of memory map entries.
+    uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
+
+    uint64_t maximum_address = 0;
+
+    // Loop thru the memory map.
+    for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
+
+        /* Pointer arithmetic to point to an entry in the memory map using the
+        given size of the memory descriptors. */
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
+
+        if (maximum_address < (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE))) {
+            maximum_address = (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE));
+        }
+    }
+
+    return maximum_address;
+}
+
+/******************************************************************************* 
+Initialize Physical Memory Manager Function (Constructor)
+Read memory map passed from UEFI bootloader and insert free regions into red-
+black tree.
+*******************************************************************************/
+Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC_Screen_Font_v1_Renderer* font_renderer) {
+
+    /* Initialize pmm_red_black_tree_null as having the color black and it's
+    parent and children are nullptrs. DANGER TODO: This null construct needs to 
+    be allocated memory!!!*/
+    PMM_RED_BLACK_TREE_COLOR(pmm_red_black_tree_null)       = pmm_red_black_tree_color::black;
+    PMM_RED_BLACK_TREE_PARENT(pmm_red_black_tree_null)      = nullptr;
+    PMM_RED_BLACK_TREE_LEFT_CHILD(pmm_red_black_tree_null)  = nullptr;
+    PMM_RED_BLACK_TREE_RIGHT_CHILD(pmm_red_black_tree_null) = nullptr;
+
+    // Initialize the root of the tree as being the null construct.
+    Physical_Memory_Manager::pmm_red_black_tree_root = pmm_red_black_tree_null;
+
+    // Initialize the current memory being addressed to the start of memory.
+    void* current_memory = (void*)0;
+
+    // Initialize the maximum memory address.
+    uint64_t maximum_memory_address = Get_Last_Address_in_Memory (mmap_info);
+
+    // Loop thru the entirety of memory.
+    while (((uint64_t)current_memory) <= maximum_memory_address) {
+
+        /* Is the current memory address in a region of memory that is usable to
+        the operating system? */
+        if (Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) {
+
+            // Remember the first address of the usable memory region.
+            void* first_usable_memory_addr = current_memory;
+
+            /* Traverse forward into memory until an unusable memory region is 
+            found or the last memory address is reached. */
+            uint64_t accumulated_memory_size = 0;
+            while ((Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) && 
+                  (((uint64_t)current_memory) <= maximum_memory_address)) {
+
+                // Get the size of the current memory region.
+                uint64_t memory_region_size = Get_Size_of_Memory_Region (mmap_info, current_memory);
+
+                // Accumulate the sizes of the usable memory regions.
+                accumulated_memory_size += memory_region_size;
+
+                // Move forward to next memory region.
+                current_memory = (void*)(((uint8_t*)current_memory) + (memory_region_size + 1));
+
             }
 
-            /* Initialize a void pointer to the start of the usable physical 
-            memory region. */
-            void* usable_memory = (void*)(mem_desc->PhysicalStart);
-
-            // Initialize the size and flags portion of the free memory header.
+            /* Coalesce memory by declaring the size of the first usable region
+            as the accumulated memory size. */
             physical_memory_size_and_flags size_and_flags;
-            size_and_flags.aligned_size = ((mem_desc->NumberOfPages * PMM_FRAME_SIZE) - (sizeof(physical_memory_size_and_flags) * PMM_BYTE_SIZE) - (sizeof(physical_memory_boundary_tag) * PMM_BYTE_SIZE)) / PMM_BYTE_SIZE;
+            size_and_flags.aligned_size = accumulated_memory_size / 8;
             size_and_flags.is_allocated = 0;
             size_and_flags.reserved     = 0;
+            *((physical_memory_size_and_flags*)first_usable_memory_addr) = size_and_flags;
 
-            /* Treat the void pointer as a physical_memory_size_and_flags 
-            pointer to write the size and flags portion of the free memory 
-            header. */
-            *((physical_memory_size_and_flags*)usable_memory) = size_and_flags;
-
-            // Set the boundary tag at the end of the memory region.
+            // Copy the size and flags to the boundary tag as well.
             physical_memory_boundary_tag boundary_tag;
             boundary_tag.size_and_flags = size_and_flags;
-            *((physical_memory_boundary_tag*)(((uint8_t*)usable_memory) + (mem_desc->NumberOfPages * PMM_FRAME_SIZE) - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+            *((physical_memory_boundary_tag*)(((uint8_t*)first_usable_memory_addr) + accumulated_memory_size - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+
+            // Insert the coalesced memory region into the red-black tree.
+            pmm_red_black_tree_insert(first_usable_memory_addr);
+
+        /* The current memory address is not in a region of memory that is 
+        usable to the operating system. */
+        } else {
+
+            // Jump to the next memory region. 
+            current_memory = (void*)(Get_Last_Address_in_Memory_Region(mmap_info, current_memory) + 1);
+
         }
     }
 
@@ -603,53 +664,6 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
     font_renderer->print_string(0xFFFFFFFF, "Hello World", 10, 10);
     while(1);
 
-    // Start from the start of memory.
-    void* current_memory = (void*)0;
-
-    while (((uint64_t)current_memory) <= maximum_usable_memory_region_address) {
-
-        if (Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) {
-
-            // Remember the address of the first usable memory region.
-            void* first_usable_memory_addr = current_memory;
-
-            /* Traverse forward into memory until an unusable memory region is 
-            found or the last usable memory region is reached. */
-            uint64_t accumulated_memory_size = 0;
-            while ((Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) && 
-                  (((uint64_t)current_memory) <= maximum_usable_memory_region_address)) {
-                
-                /* Accumulate total size of usable memory region; adding back 
-                the size of the memory header and footer of each region.*/
-                accumulated_memory_size += PMM_RED_BLACK_TREE_KEY_VALUE(current_memory) + (sizeof(physical_memory_size_and_flags) * PMM_BYTE_SIZE) + (sizeof(physical_memory_boundary_tag) * PMM_BYTE_SIZE);
-                
-                // Move forward to next memory region.
-                current_memory = (void*)(((uint8_t*)current_memory) + PMM_RED_BLACK_TREE_KEY_VALUE(current_memory));
-
-            }
-
-            // Coalesce memory by modifying the size of the first usable region.
-            physical_memory_size_and_flags size_and_flags;
-            size_and_flags.aligned_size = (accumulated_memory_size - (sizeof(physical_memory_size_and_flags) * PMM_BYTE_SIZE) - (sizeof(physical_memory_boundary_tag) * PMM_BYTE_SIZE)) / PMM_BYTE_SIZE;
-            size_and_flags.is_allocated = 0;
-            size_and_flags.reserved     = 0;
-            *((physical_memory_size_and_flags*)first_usable_memory_addr) = size_and_flags;
-
-            // Update the boundary tag as well.
-            physical_memory_boundary_tag boundary_tag;
-            boundary_tag.size_and_flags = size_and_flags;
-            *((physical_memory_boundary_tag*)(((uint8_t*)first_usable_memory_addr) + accumulated_memory_size - sizeof(physical_memory_boundary_tag))) = boundary_tag;
-
-            // Insert the free coalesced memory region into the red-black tree.
-            pmm_red_black_tree_insert(first_usable_memory_addr);
-
-        // Current memory is unusable, index to the next memory region.
-        } else {
-
-            current_memory = (void*)(Get_Last_Address_in_Memory_Region(mmap_info, current_memory) + 1);
-
-        }
-    }
 }
 
 /******************************************************************************* 
