@@ -232,6 +232,47 @@ UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
     return UEFI_SUCCESS;
 }
 
+UEFI_STATUS display_memory_map (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
+
+    // Clear screen to the default background color.
+    SystemTable->ConOut->SetAttribute (
+        SystemTable->ConOut, 
+        UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR)
+    );
+    SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
+
+    Memory_Map_Info memory_map_i;
+
+    uefi_get_memory_map (SystemTable, memory_map_i);
+
+    // Calculate the number of memory map entries.
+    uint64_t num_of_mem_map_entries = memory_map_i.size / memory_map_i.desc_size;
+
+    // Loop thru the memory map.
+    for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
+
+        /* Pointer arithmetic to point to an entry in the memory map using the
+        given size of the memory descriptors. */
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(memory_map_i.map)) + (idx * memory_map_i.desc_size));
+
+        uefi_printf(SystemTable, u"%u: Type:%u, Phy:%h, Virt:%h, Pages:%u, Attr:%h\r\n",
+            idx,
+            mem_desc->Type,
+            mem_desc->PhysicalStart,
+            mem_desc->VirtualStart,
+            mem_desc->NumberOfPages,
+            mem_desc->Attribute);
+
+        // Wait for keystroke every 20 printed entries.
+        if (((idx % 20) == 0) || (idx == (num_of_mem_map_entries - 1))) {
+            uefi_wait_for_keystroke (SystemTable);
+        }
+    }
+
+    return UEFI_SUCCESS;
+
+}
+
 /*******************************************************************************
 LAUNCH COSMOS FUNCTION
 *******************************************************************************/
@@ -280,6 +321,9 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
     // Exit UEFI boot services.
     SystemTable->BootServices->ExitBootServices(ImageHandle, k->memory_map.key);
 
+    num_of_mem_map_entries = k->memory_map.size / k->memory_map.desc_size;
+    uefi_printf(SystemTable, u"2:Number of memory map entries: %u\r\n", num_of_mem_map_entries);
+
     /* Call the kernel's entry point to turn control over to the operating 
     system. */
     entry_point(k);
@@ -319,6 +363,7 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
 
     const char16_t* menu_options[] = {
         u"Read ESP",
+        u"Read Memory Map",
         u"Launch cosmOS!"
     };
 
@@ -387,6 +432,8 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
             if (selected_menu_option == 0) {
                 read_esp (ImageHandle, SystemTable);
             } else if (selected_menu_option == 1) {
+                display_memory_map (ImageHandle, SystemTable);
+            } else if (selected_menu_option == 2) {
                 launch_cosmOS (ImageHandle, SystemTable, datetime_event);
             }
         }

@@ -13,17 +13,19 @@ __attribute__((section(".kernel"))) int UEFI_API kernel_main (Kernel_Handover* k
 
     Physical_Memory_Manager pmm (&k->memory_map, font_renderer);
 
-    // // Pointer to framebuffer in memory.
-    // uint32_t* framebuffer = (uint32_t*) k->gop.FrameBufferBase; 
+    void* mem = pmm.allocate_physical_frames(10);
 
-    // // Horizontal and vertical resolution.
-    // uint32_t x_resolution = k->gop.Info->PixelsPerScanLine;
-    // uint32_t y_resolution = k->gop.Info->VerticalResolution;
+    // Pointer to framebuffer in memory.
+    uint32_t* framebuffer = (uint32_t*) k->gop.FrameBufferBase; 
 
-    // // Color entire framebuffer.
-    // for (uint32_t y = 0; y < y_resolution; y++)
-    //     for (uint32_t x = 0; x < x_resolution; x++)
-    //         framebuffer[((y * x_resolution) + x)] = 0xFFDDDDDD;
+    // Horizontal and vertical resolution.
+    uint32_t x_resolution = k->gop.Info->PixelsPerScanLine;
+    uint32_t y_resolution = k->gop.Info->VerticalResolution;
+
+    // Color entire framebuffer.
+    for (uint32_t y = 0; y < y_resolution; y++)
+        for (uint32_t x = 0; x < x_resolution; x++)
+            framebuffer[((y * x_resolution) + x)] = 0xFFDDDDDD;
 
     // Never return to UEFI.
     while(1);

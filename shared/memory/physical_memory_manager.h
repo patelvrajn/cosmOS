@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "../uefi/uefi_memory_map.h"
-#include "..//graphics/fonts/pc_screen_font_v1_renderer.h"
+#include "../graphics/fonts/pc_screen_font_v1_renderer.h"
 
 enum pmm_red_black_tree_color {
     black = 0,
@@ -35,6 +35,7 @@ class Physical_Memory_Manager {
     public:
 
         Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC_Screen_Font_v1_Renderer* font_renderer);
+        void* allocate_physical_frames (uint64_t desired_size);
 
     private:
 
@@ -42,20 +43,22 @@ class Physical_Memory_Manager {
         void* pmm_red_black_tree_root;
         void* pmm_red_black_tree_null;
 
-        void  pmm_red_black_tree_rotate_left   (void* x);
-        void  pmm_red_black_tree_rotate_right  (void* y);
-        void* pmm_red_black_tree_find_best_fit (uint64_t value);
-        void  pmm_red_black_tree_insert        (void* z);
-        void  pmm_red_black_tree_insert_fixup  (void* z);
-        void  pmm_red_black_tree_transplant    (void* u, void* v);
-        void* pmm_red_black_tree_minimum       (void* x);
-        void  pmm_red_black_tree_delete        (void* z);
-        void  pmm_red_black_tree_delete_fixup  (void* x);
+        void  pmm_red_black_tree_rotate_left                  (void* x);
+        void  pmm_red_black_tree_rotate_right                 (void* y);
+        void* pmm_red_black_tree_find_parent_of_inserted_node (uint64_t value);
+        void* pmm_red_black_tree_find_best_fit                (uint64_t value);
+        void  pmm_red_black_tree_insert                       (void* z);
+        void  pmm_red_black_tree_insert_fixup                 (void* z);
+        void  pmm_red_black_tree_transplant                   (void* u, void* v);
+        void* pmm_red_black_tree_minimum                      (void* x);
+        void  pmm_red_black_tree_delete                       (void* z);
+        void  pmm_red_black_tree_delete_fixup                 (void* x);
 
         bool Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY_TYPE mem_type);
         bool Is_Physical_Memory_Region_Usable (Memory_Map_Info* mmap_info, void* addr);
         uint64_t Get_Last_Address_in_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
         uint64_t Get_Size_of_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
         uint64_t Get_Last_Address_in_Memory (Memory_Map_Info* mmap_info);
+        uint64_t Get_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
 
 };

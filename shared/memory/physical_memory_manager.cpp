@@ -105,24 +105,24 @@ void Physical_Memory_Manager::pmm_red_black_tree_rotate_right (void* y) {
 }
 
 /*******************************************************************************
-Red-black Tree Find Best Fit Function
+Red-black Tree Find Parent of Inserted Node Function
 *******************************************************************************/
-void* Physical_Memory_Manager::pmm_red_black_tree_find_best_fit (uint64_t value) {
+void* Physical_Memory_Manager::pmm_red_black_tree_find_parent_of_inserted_node (uint64_t value) {
 
     // Initialize x to the root to descend down the tree.
     void* x = pmm_red_black_tree_root;
 
-    // Initialize y which will be the parent of z.
+    // Initialize y which will be the parent of x.
     void* y = pmm_red_black_tree_null;
 
-    /* Start at the root and descend down the tree to find the parent of z like
+    /* Start at the root and descend down the tree to find the parent of x like
     an ordinary BST. */
     while (x != pmm_red_black_tree_null) {
         
         // Set y to be the current node x.
         y = x;
 
-        /* If the key of z is less than the current node x's key go left 
+        /* If the given value is less than the current node x's key go left 
         otherwise, go right.*/
         if (value < PMM_RED_BLACK_TREE_KEY_VALUE(x)) {
             x = PMM_RED_BLACK_TREE_LEFT_CHILD(x);
@@ -131,8 +131,44 @@ void* Physical_Memory_Manager::pmm_red_black_tree_find_best_fit (uint64_t value)
         }
     }
 
-    // Return the node with the value closest to the given value (the best fit).
+    // Return the parent of the inserted node.
     return y;
+
+}
+
+/*******************************************************************************
+Red-black Tree Find Best Fit Function
+*******************************************************************************/
+void* Physical_Memory_Manager::pmm_red_black_tree_find_best_fit (uint64_t value) {
+
+    // Initialize x to the root to descend down the tree.
+    void* x = pmm_red_black_tree_root;
+
+    /* Initialize best fit which will be the node with the smallest value 
+    greater than the given one. */
+    void* best_fit = pmm_red_black_tree_null;
+
+    /* Start at the root and descend down the tree to find the parent of x like
+    an ordinary BST. */
+    while (x != pmm_red_black_tree_null) {
+        
+        /* Set best fit to be the current node x if x has a value greater than
+        the given value. */
+        if (value < PMM_RED_BLACK_TREE_KEY_VALUE(x)) {
+            best_fit = x;
+        }
+
+        /* If the given value is less than the current node x's key go left 
+        otherwise, go right.*/
+        if (value < PMM_RED_BLACK_TREE_KEY_VALUE(x)) {
+            x = PMM_RED_BLACK_TREE_LEFT_CHILD(x);
+        } else {
+            x = PMM_RED_BLACK_TREE_RIGHT_CHILD(x);
+        }
+    }
+
+    // Return the best fit.
+    return best_fit;
 
 }
 
@@ -142,7 +178,7 @@ Red-black Tree Insert Function
 void Physical_Memory_Manager::pmm_red_black_tree_insert (void* z) {
 
     // y will be the parent of z.
-    void* y = pmm_red_black_tree_find_best_fit (PMM_RED_BLACK_TREE_KEY_VALUE(z));
+    void* y = pmm_red_black_tree_find_parent_of_inserted_node (PMM_RED_BLACK_TREE_KEY_VALUE(z));
 
     // Set z's parent to be y after the descent.
     PMM_RED_BLACK_TREE_PARENT(z) = y;
@@ -486,9 +522,12 @@ bool Physical_Memory_Manager::Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY
 
     /* Do not use UefiLoaderCode or UefiLoaderData as the operating system's 
     code maybe allocated to that type of memory. */
-    return ((mem_type == UEFI_MEMORY_TYPE::UefiBootServicesCode)   ||
-            (mem_type == UEFI_MEMORY_TYPE::UefiBootServicesData)   ||
-            (mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory) ||
+    // return ((mem_type == UEFI_MEMORY_TYPE::UefiBootServicesCode)   ||
+    //         (mem_type == UEFI_MEMORY_TYPE::UefiBootServicesData)   ||
+    //         (mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory) ||
+    //         (mem_type == UEFI_MEMORY_TYPE::UefiPersistentMemory)); 
+
+    return ((mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory) ||
             (mem_type == UEFI_MEMORY_TYPE::UefiPersistentMemory)); 
 
 }
@@ -506,6 +545,10 @@ bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (Memory_Map_Info*
         UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
 
         if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) <= (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
+
+            if (mem_desc->PhysicalStart == 0) {
+                return false;
+            }
 
             UEFI_MEMORY_TYPE mem_type = ((UEFI_MEMORY_TYPE)mem_desc->Type);
 
@@ -537,6 +580,37 @@ uint64_t Physical_Memory_Manager::Get_Last_Address_in_Memory_Region (Memory_Map_
     }
 
     return 0;
+}
+
+uint64_t Physical_Memory_Manager::Get_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
+
+    // Calculate the number of memory map entries.
+    uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
+
+    bool set = false;
+    uint64_t next_region_address = 0;
+
+    // Loop thru the memory map.
+    for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
+
+        /* Pointer arithmetic to point to an entry in the memory map using the
+        given size of the memory descriptors. */
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
+
+        if ((!set) && (mem_desc->PhysicalStart > ((uint64_t)addr))) {
+            next_region_address = mem_desc->PhysicalStart;
+            set = true;
+        }
+
+        /* Find the smallest memory region starting address greater than the
+        current address. */
+        if ((set) && (mem_desc->PhysicalStart > ((uint64_t)addr)) && (mem_desc->PhysicalStart < next_region_address)) {
+            next_region_address = mem_desc->PhysicalStart;
+        }
+    }
+
+    return next_region_address;
+
 }
 
 uint64_t Physical_Memory_Manager::Get_Size_of_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
@@ -592,11 +666,11 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
 
     /* Initialize pmm_red_black_tree_null as having the color black and it's
     parent and children are nullptrs. DANGER TODO: This null construct needs to 
-    be allocated memory!!!*/
+    be allocated memory!!! */
     PMM_RED_BLACK_TREE_COLOR(pmm_red_black_tree_null)       = pmm_red_black_tree_color::black;
-    PMM_RED_BLACK_TREE_PARENT(pmm_red_black_tree_null)      = nullptr;
-    PMM_RED_BLACK_TREE_LEFT_CHILD(pmm_red_black_tree_null)  = nullptr;
-    PMM_RED_BLACK_TREE_RIGHT_CHILD(pmm_red_black_tree_null) = nullptr;
+    // PMM_RED_BLACK_TREE_PARENT(pmm_red_black_tree_null)      = nullptr;
+    // PMM_RED_BLACK_TREE_LEFT_CHILD(pmm_red_black_tree_null)  = nullptr;
+    // PMM_RED_BLACK_TREE_RIGHT_CHILD(pmm_red_black_tree_null) = nullptr;
 
     // Initialize the root of the tree as being the null construct.
     Physical_Memory_Manager::pmm_red_black_tree_root = pmm_red_black_tree_null;
@@ -623,14 +697,11 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
             while ((Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) && 
                   (((uint64_t)current_memory) <= maximum_memory_address)) {
 
-                // Get the size of the current memory region.
-                uint64_t memory_region_size = Get_Size_of_Memory_Region (mmap_info, current_memory);
-
                 // Accumulate the sizes of the usable memory regions.
-                accumulated_memory_size += memory_region_size;
+                accumulated_memory_size += Get_Size_of_Memory_Region (mmap_info, current_memory);
 
                 // Move forward to next memory region.
-                current_memory = (void*)(((uint8_t*)current_memory) + (memory_region_size + 1));
+                current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
 
             }
 
@@ -655,14 +726,14 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
         } else {
 
             // Jump to the next memory region. 
-            current_memory = (void*)(Get_Last_Address_in_Memory_Region(mmap_info, current_memory) + 1);
+            current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
 
         }
     }
 
     // DEBUGGING STATEMENT
     font_renderer->print_string(0xFFFFFFFF, "Hello World", 10, 10);
-    while(1);
+    // while(1);
 
 }
 
@@ -674,9 +745,64 @@ to the frame-aligned size if necessary, remove the entry from red-black tree,
 and return a pointer to the address space which is the first address after the 
 header for allocated memory.
 *******************************************************************************/
-// void* Physical_Memory_Manager::allocate_physical_frames () {
+void* Physical_Memory_Manager::allocate_physical_frames (uint64_t desired_size) {
 
-// }
+    /* Add onto the size, the number of bytes the header for allocated memory
+    and the boundary tag take. */
+    uint64_t desired_size_modified = desired_size + sizeof(physical_memory_allocated_header) + sizeof(physical_memory_boundary_tag);
+
+    // Round the desired size up to the nearest multiple of the size of a frame.
+    desired_size_modified = (((uint64_t)(desired_size_modified / PMM_FRAME_SIZE)) * PMM_FRAME_SIZE) + PMM_FRAME_SIZE;
+
+    // Find the free memory region that best fits the size of memory requested.
+    void* best_fit_node = pmm_red_black_tree_find_best_fit(desired_size_modified);
+
+    /* If a best fit does not exist i.e. insufficient memory, return the null 
+    pointer. */
+    if (best_fit_node == pmm_red_black_tree_null) {
+        return nullptr;
+    }
+
+    // Remove the best fit node form the red black tree. 
+    pmm_red_black_tree_delete(best_fit_node);
+
+    // If the best fit memory region is bigger than desired, split the region.
+    if (PMM_RED_BLACK_TREE_KEY_VALUE(best_fit_node) > desired_size_modified) {
+
+        /* Change the best fit node's size in the header and create a new 
+        boundary tag. */
+        physical_memory_size_and_flags size_and_flags;
+        size_and_flags.aligned_size = desired_size_modified / 8;
+        size_and_flags.is_allocated = 0;
+        size_and_flags.reserved     = 0;
+        *((physical_memory_size_and_flags*)best_fit_node) = size_and_flags;
+
+        physical_memory_boundary_tag boundary_tag;
+        boundary_tag.size_and_flags = size_and_flags;
+        *((physical_memory_boundary_tag*)(((uint8_t*)best_fit_node) + desired_size_modified - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+
+        // Create the new memory region with a header and boundary tag.
+        uint64_t size_of_new_node = PMM_RED_BLACK_TREE_KEY_VALUE(best_fit_node) - desired_size_modified;
+        void* new_memory_region = (void*)(((uint8_t*)best_fit_node) + desired_size_modified);
+
+        size_and_flags.aligned_size = size_of_new_node / 8;
+        size_and_flags.is_allocated = 0;
+        size_and_flags.reserved     = 0;
+        *((physical_memory_size_and_flags*)new_memory_region) = size_and_flags;
+
+        boundary_tag.size_and_flags = size_and_flags;
+        *((physical_memory_boundary_tag*)(((uint8_t*)new_memory_region) + size_of_new_node - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+
+        // Add the new node to the red black tree.
+        pmm_red_black_tree_insert(new_memory_region);
+
+    }
+
+    /* Return a pointer to the address after the header of the best fit memory 
+    region. */ 
+    return ((void *)(((uint8_t*)best_fit_node) + sizeof(physical_memory_allocated_header)));
+
+}
 
 /*******************************************************************************
 Free Frame(s) of Physical Memory Function
