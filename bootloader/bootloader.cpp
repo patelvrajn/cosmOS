@@ -307,9 +307,6 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
 
     PC_Screen_Font_v1_Renderer font_renderer(ImageHandle, SystemTable, u"\\EFI\\BOOT\\zap-ext-light16.psf", k.gop, 16);
     k.font_renderer = &font_renderer;
-
-    uint64_t num_of_mem_map_entries = k.memory_map.size / k.memory_map.desc_size;
-    uefi_printf(SystemTable, u"1:Number of memory map entries: %u\r\n", num_of_mem_map_entries);
     
     /* Establish a function pointer pointing to the kinary binary's executable
     code. */
@@ -320,9 +317,6 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
 
     // Exit UEFI boot services.
     SystemTable->BootServices->ExitBootServices(ImageHandle, k.memory_map.key);
-
-    num_of_mem_map_entries = k.memory_map.size / k.memory_map.desc_size;
-    uefi_printf(SystemTable, u"2:Number of memory map entries: %u\r\n", num_of_mem_map_entries);
 
     /* Call the kernel's entry point to turn control over to the operating 
     system. */

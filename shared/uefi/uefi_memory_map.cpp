@@ -41,9 +41,6 @@ UEFI_STATUS uefi_get_memory_map (
     mmap.desc_size    = DescriptorSize;
     mmap.desc_version = DescriptorVersion;
 
-    uint64_t num_of_mem_map_entries = mmap.size / mmap.desc_size;
-    uefi_printf(SystemTable, u"0:Number of memory map entries: %u\r\n", num_of_mem_map_entries);
-
     return UEFI_SUCCESS;
 
 }
