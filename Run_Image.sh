@@ -6,5 +6,8 @@
 -m 2048M \
 -d in_asm,cpu_reset,op,int \
 -D qemu_log.log \
--s \
--S 
+-chardev stdio,mux=on,id=char0,logfile=stdio.log,signal=off \
+-mon chardev=char0 \
+-serial chardev:char0 # \
+# -s \
+# -S 
