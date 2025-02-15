@@ -34,7 +34,7 @@ class Physical_Memory_Manager {
 
     public:
 
-        Physical_Memory_Manager (Memory_Map_Info* mmap_info, void* pmm_null_memory, PC_Screen_Font_v1_Renderer* font_renderer);
+        Physical_Memory_Manager (Memory_Map_Info* mmap_info, void* pmm_null_memory);
         void* allocate_physical_frames (uint64_t desired_size);
         void  free_physical_frames (void* memory_to_free);
     

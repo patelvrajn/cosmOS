@@ -639,7 +639,7 @@ Initialize Physical Memory Manager Function (Constructor)
 Read memory map passed from UEFI bootloader and insert free regions into red-
 black tree.
 *******************************************************************************/
-Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, void* pmm_null_memory, PC_Screen_Font_v1_Renderer* font_renderer) {
+Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, void* pmm_null_memory) {
 
     m_mmap_info = mmap_info;
 
@@ -731,11 +731,6 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, vo
         }
 
     }
-
-    // DEBUGGING STATEMENT
-    font_renderer->print_string(0xFFFFFFFF, "Hello World", 10, 10);
-    // while(1);
-
 }
 
 /******************************************************************************* 

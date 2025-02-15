@@ -9,7 +9,7 @@ __attribute__((section(".kernel"))) int UEFI_API kernel_main (Kernel_Handover* k
 
     PC_Screen_Font_v1_Renderer* font_renderer = k->font_renderer;
 
-    Physical_Memory_Manager pmm (&k->memory_map, k->os_reserved_page_sets[0], font_renderer);
+    Physical_Memory_Manager pmm (&k->memory_map, k->os_reserved_page_sets[0]);
 
     void* mem = pmm.allocate_physical_frames(100);
     pmm.free_physical_frames(mem);
