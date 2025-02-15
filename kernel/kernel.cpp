@@ -1,7 +1,7 @@
 #include "../shared/uefi/uefi.h"
 #include "../shared/uefi/uefi_memory_map.h"
 #include "../shared/kernel_handover.h"
-#include "../shared/memory/physical_memory_manager.h"
+#include "memory/physical_memory_manager.h"
 #include "../shared/graphics/fonts/pc_screen_font_v1_renderer.h"
 
 extern "C" { // Avoids name mangling of the kernel's entry point.

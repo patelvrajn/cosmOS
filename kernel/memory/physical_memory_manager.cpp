@@ -1,5 +1,4 @@
 #include "physical_memory_manager.h"
-#include "../uefi/uefi_console.h"
 
 // Input p is a void*.
 #define PMM_PHYSICAL_ADDRESS_BYTE_ALIGNMENT_BITS  3

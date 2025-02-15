@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
-#include "../uefi/uefi_memory_map.h"
-#include "../graphics/fonts/pc_screen_font_v1_renderer.h"
+#include "../../shared/uefi/uefi_memory_map.h"
+#include "../../shared/graphics/fonts/pc_screen_font_v1_renderer.h"
 
 enum pmm_red_black_tree_color {
     black = 0,

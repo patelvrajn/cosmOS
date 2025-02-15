@@ -6,7 +6,6 @@
 #include "../shared/kernel_handover.h"
 #include "../shared/assembly_wrappers/registers.h"
 #include "../shared/graphics/fonts/pc_screen_font_v1_renderer.h"
-#include "../shared/memory/physical_memory_manager.h"
 #include <stddef.h>
 
 #define UP_ARROW_SCANCODE          1
