@@ -4,15 +4,15 @@
 // Input p is a void*.
 #define PMM_PHYSICAL_ADDRESS_BYTE_ALIGNMENT_BITS  3
 #define PMM_PHYSICAL_ADDRESS_FRAME_ALIGNMENT_BITS 12
-#define PMM_BYTE_SIZE                             8 // (2^PMM_PHYSICAL_ADDRESS_BYTE_ALIGNMENT_BITS)
+#define PMM_BYTE_SIZE                             8    // (2^PMM_PHYSICAL_ADDRESS_BYTE_ALIGNMENT_BITS)
 #define PMM_FRAME_SIZE                            4096 // (2^PMM_PHYSICAL_ADDRESS_FRAME_ALIGNMENT_BITS)
 #define PMM_IS_ALLOCATED_MEMORY_FLAG(p)           ((physical_memory_size_and_flags*)(p))->is_allocated
 #define PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)     ((physical_memory_free_header*)(p))
 #define PMM_RED_BLACK_TREE_KEY_VALUE(p)           (((uint64_t)(*((physical_memory_size_and_flags*)(p))).aligned_size) << PMM_PHYSICAL_ADDRESS_BYTE_ALIGNMENT_BITS)
 #define PMM_RED_BLACK_TREE_COLOR(p)               PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)->size_and_flags.red_black_tree_color
-#define PMM_RED_BLACK_TREE_PARENT(p)              (*((void**)(PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)->address_of_parent)))
-#define PMM_RED_BLACK_TREE_LEFT_CHILD(p)          (*((void**)(PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)->address_of_left_child)))
-#define PMM_RED_BLACK_TREE_RIGHT_CHILD(p)         (*((void**)(PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)->address_of_right_child)))
+#define PMM_RED_BLACK_TREE_PARENT(p)              (*((void**)(&(PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)->address_of_parent))))
+#define PMM_RED_BLACK_TREE_LEFT_CHILD(p)          (*((void**)(&(PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)->address_of_left_child))))
+#define PMM_RED_BLACK_TREE_RIGHT_CHILD(p)         (*((void**)(&(PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)->address_of_right_child))))
 #define PMM_RED_BLACK_TREE_MEM_START(p)           (*((void**)(((uint8_t*)p) + sizeof(physical_memory_free_header))))
 #define PMM_RED_BLACK_TREE_GRANDPARENT(p)         PMM_RED_BLACK_TREE_PARENT(PMM_RED_BLACK_TREE_PARENT(z))
 #define PMM_RED_BLACK_TREE_LEFT_UNCLE(p)          PMM_RED_BLACK_TREE_LEFT_CHILD(PMM_RED_BLACK_TREE_GRANDPARENT(p))
@@ -560,7 +560,7 @@ bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (Memory_Map_Info*
     return false;
 }
 
-uint64_t Physical_Memory_Manager::Get_Last_Address_in_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
+uint64_t Physical_Memory_Manager::Get_First_Address_in_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
 
     // Calculate the number of memory map entries.
     uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
@@ -635,54 +635,35 @@ uint64_t Physical_Memory_Manager::Get_Size_of_Memory_Region (Memory_Map_Info* mm
     return 0;
 }
 
-uint64_t Physical_Memory_Manager::Get_Last_Address_in_Memory (Memory_Map_Info* mmap_info) {
-
-    // Calculate the number of memory map entries.
-    uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
-
-    uint64_t maximum_address = 0;
-
-    // Loop thru the memory map.
-    for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
-
-        /* Pointer arithmetic to point to an entry in the memory map using the
-        given size of the memory descriptors. */
-        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
-
-        if (maximum_address < (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE))) {
-            maximum_address = (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE));
-        }
-    }
-
-    return maximum_address;
-}
-
 /******************************************************************************* 
 Initialize Physical Memory Manager Function (Constructor)
 Read memory map passed from UEFI bootloader and insert free regions into red-
 black tree.
 *******************************************************************************/
-Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC_Screen_Font_v1_Renderer* font_renderer) {
+Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, void* pmm_null_memory, PC_Screen_Font_v1_Renderer* font_renderer) {
+
+    m_mmap_info = mmap_info;
 
     /* Initialize pmm_red_black_tree_null as having the color black and it's
-    parent and children are nullptrs. DANGER TODO: This null construct needs to 
-    be allocated memory!!! */
+    parent and children are pmm_red_black_tree_null as well. */
+    pmm_red_black_tree_null = pmm_null_memory;
     PMM_RED_BLACK_TREE_COLOR(pmm_red_black_tree_null)       = pmm_red_black_tree_color::black;
-    // PMM_RED_BLACK_TREE_PARENT(pmm_red_black_tree_null)      = nullptr;
-    // PMM_RED_BLACK_TREE_LEFT_CHILD(pmm_red_black_tree_null)  = nullptr;
-    // PMM_RED_BLACK_TREE_RIGHT_CHILD(pmm_red_black_tree_null) = nullptr;
+    PMM_RED_BLACK_TREE_PARENT(pmm_red_black_tree_null)      = pmm_red_black_tree_null;
+    PMM_RED_BLACK_TREE_LEFT_CHILD(pmm_red_black_tree_null)  = pmm_red_black_tree_null;
+    PMM_RED_BLACK_TREE_RIGHT_CHILD(pmm_red_black_tree_null) = pmm_red_black_tree_null;
 
     // Initialize the root of the tree as being the null construct.
-    Physical_Memory_Manager::pmm_red_black_tree_root = pmm_red_black_tree_null;
+    pmm_red_black_tree_root = pmm_red_black_tree_null;
+    PMM_RED_BLACK_TREE_COLOR(pmm_red_black_tree_root)       = pmm_red_black_tree_color::black;
+    PMM_RED_BLACK_TREE_PARENT(pmm_red_black_tree_root)      = pmm_red_black_tree_null;
+    PMM_RED_BLACK_TREE_LEFT_CHILD(pmm_red_black_tree_root)  = pmm_red_black_tree_null;
+    PMM_RED_BLACK_TREE_RIGHT_CHILD(pmm_red_black_tree_root) = pmm_red_black_tree_null;
 
     // Initialize the current memory being addressed to the start of memory.
     void* current_memory = (void*)0;
 
-    // Initialize the maximum memory address.
-    uint64_t maximum_memory_address = Get_Last_Address_in_Memory (mmap_info);
-
     // Loop thru the entirety of memory.
-    while (((uint64_t)current_memory) <= maximum_memory_address) {
+    while (true) {
 
         /* Is the current memory address in a region of memory that is usable to
         the operating system? */
@@ -692,21 +673,35 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
             void* first_usable_memory_addr = current_memory;
 
             /* Traverse forward into memory until an unusable memory region is 
-            found or the last memory address is reached. */
+            found or the next memory region's address is zero indicating there 
+            is no next memory region. */
             uint64_t accumulated_memory_size = 0;
             while ((Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) && 
-                  (((uint64_t)current_memory) <= maximum_memory_address)) {
+                  (Get_Next_Memory_Region (mmap_info, current_memory) != 0)) {
 
                 // Accumulate the sizes of the usable memory regions.
                 accumulated_memory_size += Get_Size_of_Memory_Region (mmap_info, current_memory);
 
+                /* If the calculated first address of the next memory region 
+                does not match the first address of the next memory region there
+                is an address gap; this is the end of this accumulated region 
+                and go to the next region. */
+                if (Get_First_Address_in_Next_Memory_Region (mmap_info, current_memory) != 
+                    Get_Next_Memory_Region (mmap_info, current_memory)) {
+                    current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
+                    break;
+                }
+            
                 // Move forward to next memory region.
                 current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
 
             }
 
             /* Coalesce memory by declaring the size of the first usable region
-            as the accumulated memory size. */
+            as the accumulated memory size. The division by 8 is because the 
+            aligned size is only the upper 61 bits. It is guaranteed to be a 
+            multiple of 8 because the sizes are a multiple of the frame size 
+            which is 4096 which is a multiple of 8. */
             physical_memory_size_and_flags size_and_flags;
             size_and_flags.aligned_size = accumulated_memory_size / 8;
             size_and_flags.is_allocated = 0;
@@ -729,6 +724,13 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC
             current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
 
         }
+
+        /* The next memory region's address is zero indicating there is no next 
+        memory region. */
+        if (current_memory == 0) {
+            break;
+        }
+
     }
 
     // DEBUGGING STATEMENT
@@ -766,6 +768,17 @@ void* Physical_Memory_Manager::allocate_physical_frames (uint64_t desired_size) 
     // Remove the best fit node form the red black tree. 
     pmm_red_black_tree_delete(best_fit_node);
 
+    // Update header and boundary tag to say this region is now allocated.
+    physical_memory_size_and_flags size_and_flags;
+    size_and_flags.aligned_size = PMM_RED_BLACK_TREE_KEY_VALUE(best_fit_node) / 8;
+    size_and_flags.is_allocated = 1;
+    size_and_flags.reserved     = 0;
+    *((physical_memory_size_and_flags*)best_fit_node) = size_and_flags;
+
+    physical_memory_boundary_tag boundary_tag;
+    boundary_tag.size_and_flags = size_and_flags;
+    *((physical_memory_boundary_tag*)(((uint8_t*)best_fit_node) + PMM_RED_BLACK_TREE_KEY_VALUE(best_fit_node) - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+
     // If the best fit memory region is bigger than desired, split the region.
     if (PMM_RED_BLACK_TREE_KEY_VALUE(best_fit_node) > desired_size_modified) {
 
@@ -773,7 +786,7 @@ void* Physical_Memory_Manager::allocate_physical_frames (uint64_t desired_size) 
         boundary tag. */
         physical_memory_size_and_flags size_and_flags;
         size_and_flags.aligned_size = desired_size_modified / 8;
-        size_and_flags.is_allocated = 0;
+        size_and_flags.is_allocated = 1;
         size_and_flags.reserved     = 0;
         *((physical_memory_size_and_flags*)best_fit_node) = size_and_flags;
 
@@ -810,6 +823,108 @@ Given a pointer to the address space free the memory allocated by updating the
 header and boundary tag, add the region into the red-black tree after coalescing
 the freed space with other contigious free memory.
 *******************************************************************************/
-// void Physical_Memory_Manager::free_physical_frames () {
+void Physical_Memory_Manager::free_physical_frames (void* memory_to_free) {
 
-// }
+    /* The given void pointer is the pointer to the start of allocated memory,
+    go back to a pointer to the header. */
+    void* memory_to_free_modified = (void*)(((uint8_t*)(memory_to_free)) - sizeof(physical_memory_allocated_header));
+
+    // Jump to the region on left.
+    void* left_memory_address = (void*)(((uint8_t*)(memory_to_free_modified)) - sizeof(physical_memory_boundary_tag));
+    bool left_is_free_and_usable = false;
+
+    // Check if memory region is usable.
+    if (Is_Physical_Memory_Region_Usable(m_mmap_info, left_memory_address)) {
+
+        // Is the memory region free?
+        if (PMM_IS_ALLOCATED_MEMORY_FLAG(left_memory_address) == 0) {
+            left_is_free_and_usable = true;
+        }
+
+    }
+
+    // Jump to the region on right.
+    void* right_memory_address = (void*)(((uint8_t*)(memory_to_free_modified)) + PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified));
+    bool right_is_free_and_usable = false;
+
+    // Try coalescing to the right. Check if memory region is usable.
+    if (Is_Physical_Memory_Region_Usable(m_mmap_info, right_memory_address)) {
+
+        // Is the memory region free?
+        if (PMM_IS_ALLOCATED_MEMORY_FLAG(right_memory_address) == 0) {
+            right_is_free_and_usable = true;
+        }
+
+    }
+
+    /* Jump to beginning of the left memory region. */
+    left_memory_address = (void*)(((uint8_t*)(left_memory_address)) - (PMM_RED_BLACK_TREE_KEY_VALUE(left_memory_address) - sizeof(physical_memory_boundary_tag)));
+
+    // Coalesce with the left and right memory regions. 
+    if (left_is_free_and_usable && right_is_free_and_usable) {
+
+        uint64_t coalesced_size = PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified) + PMM_RED_BLACK_TREE_KEY_VALUE(left_memory_address) + PMM_RED_BLACK_TREE_KEY_VALUE(right_memory_address);
+
+        physical_memory_size_and_flags size_and_flags;
+        size_and_flags.aligned_size = coalesced_size / 8;
+        size_and_flags.is_allocated = 0;
+        size_and_flags.reserved     = 0;
+        *((physical_memory_size_and_flags*)left_memory_address) = size_and_flags;
+
+        physical_memory_boundary_tag boundary_tag;
+        boundary_tag.size_and_flags = size_and_flags;
+        *((physical_memory_boundary_tag*)(((uint8_t*)left_memory_address) + coalesced_size - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+
+        pmm_red_black_tree_delete(right_memory_address);
+
+    // Coalesce with the right memory region.
+    } else if ((!left_is_free_and_usable) && right_is_free_and_usable) {
+        
+        uint64_t coalesced_size = PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified) + PMM_RED_BLACK_TREE_KEY_VALUE(right_memory_address);
+
+        physical_memory_size_and_flags size_and_flags;
+        size_and_flags.aligned_size = coalesced_size / 8;
+        size_and_flags.is_allocated = 0;
+        size_and_flags.reserved     = 0;
+        *((physical_memory_size_and_flags*)memory_to_free_modified) = size_and_flags;
+
+        physical_memory_boundary_tag boundary_tag;
+        boundary_tag.size_and_flags = size_and_flags;
+        *((physical_memory_boundary_tag*)(((uint8_t*)memory_to_free_modified) + coalesced_size - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+
+        pmm_red_black_tree_insert(memory_to_free_modified);
+        pmm_red_black_tree_delete(right_memory_address);
+
+    // Coalesce with the left memory region.
+    } else if (left_is_free_and_usable && (!right_is_free_and_usable)) {
+
+        uint64_t coalesced_size = PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified) + PMM_RED_BLACK_TREE_KEY_VALUE(left_memory_address);
+
+        physical_memory_size_and_flags size_and_flags;
+        size_and_flags.aligned_size = coalesced_size / 8;
+        size_and_flags.is_allocated = 0;
+        size_and_flags.reserved     = 0;
+        *((physical_memory_size_and_flags*)left_memory_address) = size_and_flags;
+
+        physical_memory_boundary_tag boundary_tag;
+        boundary_tag.size_and_flags = size_and_flags;
+        *((physical_memory_boundary_tag*)(((uint8_t*)left_memory_address) + coalesced_size - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+
+    // No coalescing.
+    } else {
+
+        // The memory is no longer allocated.
+        physical_memory_size_and_flags size_and_flags;
+        size_and_flags.aligned_size = PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified) / 8;
+        size_and_flags.is_allocated = 0;
+        size_and_flags.reserved     = 0;
+        *((physical_memory_size_and_flags*)memory_to_free_modified) = size_and_flags;
+
+        physical_memory_boundary_tag boundary_tag;
+        boundary_tag.size_and_flags = size_and_flags;
+        *((physical_memory_boundary_tag*)(((uint8_t*)memory_to_free_modified) + PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified) - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+
+        pmm_red_black_tree_insert(memory_to_free_modified);
+
+    }
+}

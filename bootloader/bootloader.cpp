@@ -299,15 +299,28 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
     uint64_t file_buffer_size;
     void* kernel_buffer = read_esp_file_into_buffer (ImageHandle, SystemTable, u"\\EFI\\BOOT\\kernel.bin", &file_buffer_size);
 
+    Kernel_Handover k;
+
+    void* pmm_null_page = nullptr;
+    status = SystemTable->BootServices->AllocatePool (
+        UefiLoaderData, 
+        4096, // Allocate 1 page (the minimum the function can allocate)
+        (void **)&pmm_null_page // For the PMM's null construct.
+    );
+
+    void* os_reserved_page_sets[1];
+    os_reserved_page_sets[0] = pmm_null_page; 
+
+    k.os_reserved_page_sets[0] = os_reserved_page_sets[0];
+
     /* Populate kernel handover parameters object with memory map and GOP mode
     for access to framebuffer.*/
-    Kernel_Handover k;
     k.gop = *gop->Mode;
     uefi_get_memory_map (SystemTable, k.memory_map);
 
     PC_Screen_Font_v1_Renderer font_renderer(ImageHandle, SystemTable, u"\\EFI\\BOOT\\zap-ext-light16.psf", k.gop, 16);
     k.font_renderer = &font_renderer;
-    
+
     /* Establish a function pointer pointing to the kinary binary's executable
     code. */
     void UEFI_API (*entry_point)(Kernel_Handover*) = NULL;

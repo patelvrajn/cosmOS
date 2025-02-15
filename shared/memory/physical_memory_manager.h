@@ -34,14 +34,17 @@ class Physical_Memory_Manager {
 
     public:
 
-        Physical_Memory_Manager (Memory_Map_Info* mmap_info, PC_Screen_Font_v1_Renderer* font_renderer);
+        Physical_Memory_Manager (Memory_Map_Info* mmap_info, void* pmm_null_memory, PC_Screen_Font_v1_Renderer* font_renderer);
         void* allocate_physical_frames (uint64_t desired_size);
-
+        void  free_physical_frames (void* memory_to_free);
+    
     private:
 
         // Pointer to the root of the red-black tree.
         void* pmm_red_black_tree_root;
         void* pmm_red_black_tree_null;
+
+        Memory_Map_Info* m_mmap_info = nullptr;
 
         void  pmm_red_black_tree_rotate_left                  (void* x);
         void  pmm_red_black_tree_rotate_right                 (void* y);
@@ -56,9 +59,8 @@ class Physical_Memory_Manager {
 
         bool Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY_TYPE mem_type);
         bool Is_Physical_Memory_Region_Usable (Memory_Map_Info* mmap_info, void* addr);
-        uint64_t Get_Last_Address_in_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
+        uint64_t Get_First_Address_in_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
         uint64_t Get_Size_of_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
-        uint64_t Get_Last_Address_in_Memory (Memory_Map_Info* mmap_info);
         uint64_t Get_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
 
 };

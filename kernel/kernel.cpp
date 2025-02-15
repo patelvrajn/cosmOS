@@ -11,9 +11,10 @@ __attribute__((section(".kernel"))) int UEFI_API kernel_main (Kernel_Handover* k
 
     // font_renderer->print_string(0xFFFFFFFF, "Hello World", 10, 10);
 
-    Physical_Memory_Manager pmm (&k->memory_map, font_renderer);
+    Physical_Memory_Manager pmm (&k->memory_map, k->os_reserved_page_sets[0], font_renderer);
 
-    void* mem = pmm.allocate_physical_frames(10);
+    void* mem = pmm.allocate_physical_frames(100);
+    pmm.free_physical_frames(mem);
 
     // Pointer to framebuffer in memory.
     uint32_t* framebuffer = (uint32_t*) k->gop.FrameBufferBase; 
