@@ -9,8 +9,6 @@ __attribute__((section(".kernel"))) int UEFI_API kernel_main (Kernel_Handover* k
 
     PC_Screen_Font_v1_Renderer* font_renderer = k->font_renderer;
 
-    // font_renderer->print_string(0xFFFFFFFF, "Hello World", 10, 10);
-
     Physical_Memory_Manager pmm (&k->memory_map, k->os_reserved_page_sets[0], font_renderer);
 
     void* mem = pmm.allocate_physical_frames(100);
@@ -27,6 +25,8 @@ __attribute__((section(".kernel"))) int UEFI_API kernel_main (Kernel_Handover* k
     for (uint32_t y = 0; y < y_resolution; y++)
         for (uint32_t x = 0; x < x_resolution; x++)
             framebuffer[((y * x_resolution) + x)] = 0xFFDDDDDD;
+
+    font_renderer->print_string(0x00000000, "Hello World", 10, 10);
 
     // Never return to UEFI.
     while(1);
