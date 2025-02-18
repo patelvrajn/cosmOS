@@ -13,7 +13,7 @@
 #define PMM_RED_BLACK_TREE_LEFT_CHILD(p)          (*((void**)(&(PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)->address_of_left_child))))
 #define PMM_RED_BLACK_TREE_RIGHT_CHILD(p)         (*((void**)(&(PMM_RED_BLACK_TREE_MEM_FREE_HEADER(p)->address_of_right_child))))
 #define PMM_RED_BLACK_TREE_MEM_START(p)           (*((void**)(((uint8_t*)p) + sizeof(physical_memory_free_header))))
-#define PMM_RED_BLACK_TREE_GRANDPARENT(p)         PMM_RED_BLACK_TREE_PARENT(PMM_RED_BLACK_TREE_PARENT(z))
+#define PMM_RED_BLACK_TREE_GRANDPARENT(p)         PMM_RED_BLACK_TREE_PARENT(PMM_RED_BLACK_TREE_PARENT(p))
 #define PMM_RED_BLACK_TREE_LEFT_UNCLE(p)          PMM_RED_BLACK_TREE_LEFT_CHILD(PMM_RED_BLACK_TREE_GRANDPARENT(p))
 #define PMM_RED_BLACK_TREE_RIGHT_UNCLE(p)         PMM_RED_BLACK_TREE_RIGHT_CHILD(PMM_RED_BLACK_TREE_GRANDPARENT(p))
 
@@ -153,7 +153,7 @@ void* Physical_Memory_Manager::pmm_red_black_tree_find_best_fit (uint64_t value)
         
         /* Set best fit to be the current node x if x has a value greater than
         the given value. */
-        if (value < PMM_RED_BLACK_TREE_KEY_VALUE(x)) {
+        if (value <= PMM_RED_BLACK_TREE_KEY_VALUE(x)) {
             best_fit = x;
         }
 
