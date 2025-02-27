@@ -6,6 +6,7 @@
 #include "../shared/kernel_handover.h"
 #include "../shared/assembly_wrappers/registers.h"
 #include "../shared/graphics/fonts/pc_screen_font_v1_renderer.h"
+#include "../shared/memory/paging.h"
 #include <stddef.h>
 
 #define UP_ARROW_SCANCODE          1
@@ -298,6 +299,9 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
     uint64_t file_buffer_size;
     void* kernel_buffer = read_esp_file_into_buffer (ImageHandle, SystemTable, u"\\EFI\\BOOT\\kernel.bin", &file_buffer_size);
 
+    uint64_t PML4Address = 0;
+    Setup_Kernel_Page_Tables(SystemTable, PML4Address);
+
     Kernel_Handover k;
 
     void* pmm_null_page = nullptr;
@@ -329,6 +333,10 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
 
     // Exit UEFI boot services.
     SystemTable->BootServices->ExitBootServices(ImageHandle, k.memory_map.key);
+
+    uefi_printf(SystemTable, u"Address of PML4: %h\r\n", PML4Address);
+
+    write_cr3(PML4Address);
 
     /* Call the kernel's entry point to turn control over to the operating 
     system. */
@@ -372,22 +380,6 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
         u"Read Memory Map",
         u"Launch cosmOS!"
     };
-
-    // uint64_t cr0_val = read_cr0();
-    // uefi_printf (SystemTable, u"CR0 value is; %h.\r\n", cr0_val);
-    // uint64_t cr4_val = read_cr4();
-    // uefi_printf (SystemTable, u"CR4 value is; %h.\r\n", cr4_val);
-
-    // uefi_printf (SystemTable, u"Physical memory header size is; %u.\r\n", sizeof(physical_memory_free_header));
-    // uefi_printf (SystemTable, u"Void pointer size is; %u.\r\n", sizeof(void*));
-
-    // uefi_printf (SystemTable, u"Hello World!\r\n");
-
-    // Memory_Map_Info* mmap_info;
-    // uefi_get_memory_map (SystemTable, mmap_info);
-    // Physical_Memory_Manager pmm (mmap_info, SystemTable);
-
-    // uefi_printf (SystemTable, u"Hello World!\r\n");
 
     uint64_t selected_menu_option = 0;
 
