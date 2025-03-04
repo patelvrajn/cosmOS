@@ -167,23 +167,23 @@ typedef enum {
 } UEFI_ALLOCATE_TYPE;
 
 typedef enum {
-    UefiReservedMemoryType,
-    UefiLoaderCode,
-    UefiLoaderData,
-    UefiBootServicesCode,
-    UefiBootServicesData,
-    UefiRuntimeServicesCode,
-    UefiRuntimeServicesData,
-    UefiConventionalMemory,
-    UefiUnusableMemory,
-    UefiACPIReclaimMemory,
-    UefiACPIMemoryNVS,
-    UefiMemoryMappedIO,
-    UefiMemoryMappedIOPortSpace,
-    UefiPalCode,
-    UefiPersistentMemory,
-    UefiUnacceptedMemoryType,
-    UefiMaxMemoryType
+    UefiReservedMemoryType,      // UEFI Memory Type 0
+    UefiLoaderCode,              // UEFI Memory Type 1
+    UefiLoaderData,              // UEFI Memory Type 2
+    UefiBootServicesCode,        // UEFI Memory Type 3
+    UefiBootServicesData,        // UEFI Memory Type 4
+    UefiRuntimeServicesCode,     // UEFI Memory Type 5
+    UefiRuntimeServicesData,     // UEFI Memory Type 6
+    UefiConventionalMemory,      // UEFI Memory Type 7
+    UefiUnusableMemory,          // UEFI Memory Type 8
+    UefiACPIReclaimMemory,       // UEFI Memory Type 9
+    UefiACPIMemoryNVS,           // UEFI Memory Type 10
+    UefiMemoryMappedIO,          // UEFI Memory Type 11
+    UefiMemoryMappedIOPortSpace, // UEFI Memory Type 12
+    UefiPalCode,                 // UEFI Memory Type 13
+    UefiPersistentMemory,        // UEFI Memory Type 14
+    UefiUnacceptedMemoryType,    // UEFI Memory Type 15
+    UefiMaxMemoryType            // UEFI Memory Type 16
 } UEFI_MEMORY_TYPE;
 
 typedef uint64_t UEFI_PHYSICAL_ADDRESS;

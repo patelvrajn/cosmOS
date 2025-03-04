@@ -11,5 +11,9 @@ typedef struct {
 
 UEFI_STATUS uefi_get_memory_map (
     UEFI_SYSTEM_TABLE* SystemTable, 
-    Memory_Map_Info&   mmap
+    Memory_Map_Info*   mmap
 );
+
+uint64_t Get_Maximum_Memory_Address (Memory_Map_Info* mmap_info);
+bool Is_Physical_Memory_Region_Type_Valid (UEFI_MEMORY_TYPE mem_type);
+bool Is_Physical_Memory_Region_Valid (Memory_Map_Info* mmap_info, uint64_t addr);

@@ -1,9 +1,9 @@
 #include "paging.h"
 #include "../uefi/uefi_console.h"
 
-UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, uint64_t& PML4Address) {
+UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, uint64_t& PML4Address, Memory_Map_Info* mmap_info) {
 
-    const uint64_t SIZE_OF_PHYSICAL_MEMORY = 2147483648; // 2GB
+    const uint64_t SIZE_OF_PHYSICAL_MEMORY = Get_Maximum_Memory_Address (mmap_info);
 
     uint64_t num_of_page_tables = 1;
     if ((SIZE_OF_PHYSICAL_MEMORY / PAGE_TABLES_VIRTUAL_ADDRESS_RANGE_SIZE) > 1) {
@@ -58,7 +58,7 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
         UEFI_ALLOCATE_TYPE::AllocateAnyPages,
         UEFI_MEMORY_TYPE::UefiLoaderData, 
         num_of_pages_needed_for_tables,
-        (UEFI_PHYSICAL_ADDRESS*)paging_memory
+        (UEFI_PHYSICAL_ADDRESS*)&paging_memory
     );
 
     UEFI_PRINT_ERROR (SystemTable, status, u"Could not allocate memory for Kernel Page Tables");

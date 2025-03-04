@@ -3,6 +3,7 @@
 #include "../shared/kernel_handover.h"
 #include "memory/physical_memory_manager.h"
 #include "../shared/graphics/fonts/pc_screen_font_v1_renderer.h"
+#include "../shared/assembly_wrappers/registers.h"
 
 extern "C" { // Avoids name mangling of the kernel's entry point.
 __attribute__((section(".kernel"))) int UEFI_API kernel_main (Kernel_Handover* k) {
@@ -11,8 +12,11 @@ __attribute__((section(".kernel"))) int UEFI_API kernel_main (Kernel_Handover* k
 
     Physical_Memory_Manager pmm (&k->memory_map, k->os_reserved_page_sets[0]);
 
-    void* mem = pmm.allocate_physical_frames(100);
-    pmm.free_physical_frames(mem);
+    void* mem_one = pmm.allocate_physical_frames(100 * 4096);
+    void* mem_two = pmm.allocate_physical_frames(100);
+
+    pmm.free_physical_frames(mem_two);
+    pmm.free_physical_frames(mem_one);
 
     // Pointer to framebuffer in memory.
     uint32_t* framebuffer = (uint32_t*) k->gop.FrameBufferBase; 

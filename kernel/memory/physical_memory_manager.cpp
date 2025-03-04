@@ -520,13 +520,10 @@ Is the Memory Region Type described in the UEFI Memory Map Usable by the OS?
 bool Physical_Memory_Manager::Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY_TYPE mem_type) {
 
     /* Do not use UefiLoaderCode or UefiLoaderData as the operating system's 
-    code maybe allocated to that type of memory. */
-    // return ((mem_type == UEFI_MEMORY_TYPE::UefiBootServicesCode)   ||
-    //         (mem_type == UEFI_MEMORY_TYPE::UefiBootServicesData)   ||
-    //         (mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory) ||
-    //         (mem_type == UEFI_MEMORY_TYPE::UefiPersistentMemory)); 
-
-    return ((mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory) ||
+    code or data maybe allocated to that type of memory. */
+    return ((mem_type == UEFI_MEMORY_TYPE::UefiBootServicesCode)   ||
+            (mem_type == UEFI_MEMORY_TYPE::UefiBootServicesData)   ||
+            (mem_type == UEFI_MEMORY_TYPE::UefiConventionalMemory) ||
             (mem_type == UEFI_MEMORY_TYPE::UefiPersistentMemory)); 
 
 }
@@ -543,7 +540,7 @@ bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (Memory_Map_Info*
         given size of the memory descriptors. */
         UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
 
-        if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) <= (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
+        if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) < (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
 
             if (mem_desc->PhysicalStart == 0) {
                 return false;
@@ -571,7 +568,7 @@ uint64_t Physical_Memory_Manager::Get_First_Address_in_Next_Memory_Region (Memor
         given size of the memory descriptors. */
         UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
 
-        if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) <= (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
+        if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) < (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
 
             return (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE));
 
@@ -624,7 +621,7 @@ uint64_t Physical_Memory_Manager::Get_Size_of_Memory_Region (Memory_Map_Info* mm
         given size of the memory descriptors. */
         UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
 
-        if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) <= (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
+        if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) < (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
 
             return (mem_desc->NumberOfPages * PMM_FRAME_SIZE);
 
@@ -675,8 +672,7 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, vo
             found or the next memory region's address is zero indicating there 
             is no next memory region. */
             uint64_t accumulated_memory_size = 0;
-            while ((Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) && 
-                  (Get_Next_Memory_Region (mmap_info, current_memory) != 0)) {
+            while (Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) {
 
                 // Accumulate the sizes of the usable memory regions.
                 accumulated_memory_size += Get_Size_of_Memory_Region (mmap_info, current_memory);
@@ -693,6 +689,10 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, vo
             
                 // Move forward to next memory region.
                 current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
+
+                if (current_memory == ((void*)0)) {
+                    break;
+                }
 
             }
 

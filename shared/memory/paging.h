@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "../uefi/uefi.h"
+#include "../uefi/uefi_memory_map.h"
 
 #define PAGE_TABLES_SIZE                             4096
 #define PAGE_TABLES_ENTRY_VIRTUAL_ADDRESS_RANGE_SIZE 4096
@@ -85,4 +86,4 @@ typedef struct {
     page_table_entry entries[PAGE_TABLES_NUM_OF_ENTRIES];
 } page_table;
 
-UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, uint64_t& PML4Address);
+UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, uint64_t& PML4Address, Memory_Map_Info* mmap_info);

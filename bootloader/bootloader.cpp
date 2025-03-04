@@ -241,19 +241,19 @@ UEFI_STATUS display_memory_map (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
     );
     SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 
-    Memory_Map_Info memory_map_i;
+    Memory_Map_Info* memory_map_i;
 
     uefi_get_memory_map (SystemTable, memory_map_i);
 
     // Calculate the number of memory map entries.
-    uint64_t num_of_mem_map_entries = memory_map_i.size / memory_map_i.desc_size;
+    uint64_t num_of_mem_map_entries = memory_map_i->size / memory_map_i->desc_size;
 
     // Loop thru the memory map.
     for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
 
         /* Pointer arithmetic to point to an entry in the memory map using the
         given size of the memory descriptors. */
-        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(memory_map_i.map)) + (idx * memory_map_i.desc_size));
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(memory_map_i->map)) + (idx * memory_map_i->desc_size));
 
         uefi_printf(SystemTable, u"%u: Type:%u, Phy:%h, Virt:%h, Pages:%u, Attr:%h\r\n",
             idx,
@@ -300,7 +300,10 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
     void* kernel_buffer = read_esp_file_into_buffer (ImageHandle, SystemTable, u"\\EFI\\BOOT\\kernel.bin", &file_buffer_size);
 
     uint64_t PML4Address = 0;
-    Setup_Kernel_Page_Tables(SystemTable, PML4Address);
+    Memory_Map_Info* mmap_info;
+    uefi_get_memory_map (SystemTable, mmap_info);
+    Setup_Kernel_Page_Tables(SystemTable, PML4Address, mmap_info);
+    SystemTable->BootServices->FreePool(mmap_info);
 
     Kernel_Handover k;
 
@@ -319,7 +322,7 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
     /* Populate kernel handover parameters object with memory map and GOP mode
     for access to framebuffer.*/
     k.gop = *gop->Mode;
-    uefi_get_memory_map (SystemTable, k.memory_map);
+    uefi_get_memory_map (SystemTable, &k.memory_map);
 
     PC_Screen_Font_v1_Renderer font_renderer(ImageHandle, SystemTable, u"\\EFI\\BOOT\\zap-ext-light16.psf", k.gop, 16);
     k.font_renderer = &font_renderer;

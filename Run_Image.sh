@@ -8,6 +8,7 @@
 -D qemu_log.log \
 -chardev stdio,mux=on,id=char0,logfile=stdio.log,signal=off \
 -mon chardev=char0 \
--serial chardev:char0 # \
+-serial chardev:char0 \
+-monitor telnet:127.0.0.1:9532,server,nowait # \
 # -s \
 # -S 
