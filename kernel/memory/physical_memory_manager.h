@@ -57,9 +57,9 @@ class Physical_Memory_Manager {
         void  pmm_red_black_tree_delete_fixup                 (void* x);
 
         bool Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY_TYPE mem_type);
-        bool Is_Physical_Memory_Region_Usable (Memory_Map_Info* mmap_info, void* addr);
-        uint64_t Get_Expected_First_Address_in_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
-        uint64_t Get_Size_of_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
-        uint64_t Get_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
+        bool Is_Physical_Memory_Region_Usable (void* addr);
+        uint64_t Get_Expected_First_Address_in_Next_Memory_Region (void* addr);
+        uint64_t Get_Size_of_Memory_Region (void* addr);
+        uint64_t Get_Next_Memory_Region (void* addr);
 
 };

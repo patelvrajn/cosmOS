@@ -531,17 +531,17 @@ bool Physical_Memory_Manager::Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY
 /*******************************************************************************
 Is the Memory Region described in the UEFI Memory Map Usable by the OS?
 *******************************************************************************/
-bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (Memory_Map_Info* mmap_info, void* addr) {
+bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (void* addr) {
 
     // Calculate the number of memory map entries.
-    uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
+    uint64_t num_of_mem_map_entries = m_mmap_info->size / m_mmap_info->desc_size;
 
     // Loop thru the memory map.
     for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
 
         /* Pointer arithmetic to point to an entry in the memory map using the
         given size of the memory descriptors. */
-        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(m_mmap_info->map)) + (idx * m_mmap_info->desc_size));
 
         if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) < (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
 
@@ -565,17 +565,17 @@ Get Expacted First Address of the next Memory Region
 Gets the first address of the next region by adding the size in number of pages
 to the starting physical address of the current region.
 *******************************************************************************/
-uint64_t Physical_Memory_Manager::Get_Expected_First_Address_in_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
+uint64_t Physical_Memory_Manager::Get_Expected_First_Address_in_Next_Memory_Region (void* addr) {
 
     // Calculate the number of memory map entries.
-    uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
+    uint64_t num_of_mem_map_entries = m_mmap_info->size / m_mmap_info->desc_size;
 
     // Loop thru the memory map.
     for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
 
         /* Pointer arithmetic to point to an entry in the memory map using the
         given size of the memory descriptors. */
-        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(m_mmap_info->map)) + (idx * m_mmap_info->desc_size));
 
         if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) < (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
 
@@ -593,10 +593,10 @@ Get Next Memory Region
 Gets the first address of the next region by looking for the smallest starting
 physical address larger than the supplied address.
 *******************************************************************************/
-uint64_t Physical_Memory_Manager::Get_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
+uint64_t Physical_Memory_Manager::Get_Next_Memory_Region (void* addr) {
 
     // Calculate the number of memory map entries.
-    uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
+    uint64_t num_of_mem_map_entries = m_mmap_info->size / m_mmap_info->desc_size;
 
     bool set = false;
     uint64_t next_region_address = 0;
@@ -606,7 +606,7 @@ uint64_t Physical_Memory_Manager::Get_Next_Memory_Region (Memory_Map_Info* mmap_
 
         /* Pointer arithmetic to point to an entry in the memory map using the
         given size of the memory descriptors. */
-        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(m_mmap_info->map)) + (idx * m_mmap_info->desc_size));
 
         if ((!set) && (mem_desc->PhysicalStart > ((uint64_t)addr))) {
             next_region_address = mem_desc->PhysicalStart;
@@ -627,17 +627,17 @@ uint64_t Physical_Memory_Manager::Get_Next_Memory_Region (Memory_Map_Info* mmap_
 /*******************************************************************************
 Get Size of Memory Region
 *******************************************************************************/
-uint64_t Physical_Memory_Manager::Get_Size_of_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
+uint64_t Physical_Memory_Manager::Get_Size_of_Memory_Region (void* addr) {
 
     // Calculate the number of memory map entries.
-    uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
+    uint64_t num_of_mem_map_entries = m_mmap_info->size / m_mmap_info->desc_size;
 
     // Loop thru the memory map.
     for (uint64_t idx = 0; idx < num_of_mem_map_entries; idx++) {
 
         /* Pointer arithmetic to point to an entry in the memory map using the
         given size of the memory descriptors. */
-        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(mmap_info->map)) + (idx * mmap_info->desc_size));
+        UEFI_MEMORY_DESCRIPTOR* mem_desc = (UEFI_MEMORY_DESCRIPTOR*)(((uint8_t*)(m_mmap_info->map)) + (idx * m_mmap_info->desc_size));
 
         if ((((uint64_t)addr) >= mem_desc->PhysicalStart) && (((uint64_t)addr) < (mem_desc->PhysicalStart + (mem_desc->NumberOfPages * PMM_FRAME_SIZE)))) {
 
@@ -681,7 +681,7 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, vo
 
         /* Is the current memory address in a region of memory that is usable to
         the operating system? */
-        if (Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) {
+        if (Is_Physical_Memory_Region_Usable(current_memory)) {
 
             // Remember the first address of the usable memory region.
             void* first_usable_memory_addr = current_memory;
@@ -690,23 +690,23 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, vo
             found or the next memory region's address is zero indicating there 
             is no next memory region. */
             uint64_t accumulated_memory_size = 0;
-            while (Is_Physical_Memory_Region_Usable(mmap_info, current_memory)) {
+            while (Is_Physical_Memory_Region_Usable(current_memory)) {
 
                 // Accumulate the sizes of the usable memory regions.
-                accumulated_memory_size += Get_Size_of_Memory_Region (mmap_info, current_memory);
+                accumulated_memory_size += Get_Size_of_Memory_Region (current_memory);
 
                 /* If the calculated first address of the next memory region 
                 does not match the first address of the next memory region there
                 is an address gap; this is the end of this accumulated region 
                 and go to the next region. */
-                if (Get_Expected_First_Address_in_Next_Memory_Region (mmap_info, current_memory) != 
-                    Get_Next_Memory_Region (mmap_info, current_memory)) {
-                    current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
+                if (Get_Expected_First_Address_in_Next_Memory_Region (current_memory) != 
+                    Get_Next_Memory_Region (current_memory)) {
+                    current_memory = (void*)(Get_Next_Memory_Region (current_memory));
                     break;
                 }
             
                 // Move forward to next memory region.
-                current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
+                current_memory = (void*)(Get_Next_Memory_Region (current_memory));
 
                 /* The next memory region's address is zero indicating there is 
                 no next memory region. */
@@ -740,7 +740,7 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, vo
         } else {
 
             // Jump to the next memory region. 
-            current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
+            current_memory = (void*)(Get_Next_Memory_Region (current_memory));
 
         }
 
@@ -852,7 +852,7 @@ void Physical_Memory_Manager::free_physical_frames (void* memory_to_free) {
     bool left_is_free_and_usable = false;
 
     // Check if we can coalesce to the left. Check if memory region is usable.
-    if (Is_Physical_Memory_Region_Usable(m_mmap_info, left_memory_address)) {
+    if (Is_Physical_Memory_Region_Usable(left_memory_address)) {
 
         // Is the memory region free?
         if (PMM_IS_ALLOCATED_MEMORY_FLAG(left_memory_address) == 0) {
@@ -868,7 +868,7 @@ void Physical_Memory_Manager::free_physical_frames (void* memory_to_free) {
     bool right_is_free_and_usable = false;
 
     // Check if we can coalesce to the right. Check if memory region is usable.
-    if (Is_Physical_Memory_Region_Usable(m_mmap_info, right_memory_address)) {
+    if (Is_Physical_Memory_Region_Usable(right_memory_address)) {
 
         // Is the memory region free?
         if (PMM_IS_ALLOCATED_MEMORY_FLAG(right_memory_address) == 0) {
