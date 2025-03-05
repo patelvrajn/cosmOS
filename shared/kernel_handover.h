@@ -1,5 +1,4 @@
-#ifndef KERNEL_HANDOVER_H
-#define KERNEL_HANDOVER_H
+#pragma once
 
 #include "uefi/uefi_memory_map.h"
 #include "uefi/uefi.h"
@@ -12,5 +11,3 @@ typedef struct {
     void*                              os_reserved_page_sets[1];
 } Kernel_Handover;
 
-#endif
-/* END OF KERNEL_HANDOVER.H */

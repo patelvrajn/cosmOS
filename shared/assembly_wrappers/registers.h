@@ -1,3 +1,4 @@
+#pragma once
 #include <stdint.h>
 
 #define DEFINE_CONTROL_REGISTER_RW_PROTO(index) \

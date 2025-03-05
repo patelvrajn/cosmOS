@@ -39,8 +39,7 @@ class Physical_Memory_Manager {
         void  free_physical_frames (void* memory_to_free);
     
     private:
-
-        // Pointer to the root of the red-black tree.
+    
         void* pmm_red_black_tree_root;
         void* pmm_red_black_tree_null;
 
@@ -59,7 +58,7 @@ class Physical_Memory_Manager {
 
         bool Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY_TYPE mem_type);
         bool Is_Physical_Memory_Region_Usable (Memory_Map_Info* mmap_info, void* addr);
-        uint64_t Get_First_Address_in_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
+        uint64_t Get_Expected_First_Address_in_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
         uint64_t Get_Size_of_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
         uint64_t Get_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr);
 

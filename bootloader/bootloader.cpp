@@ -31,8 +31,14 @@ void UEFI_API print_datetime (UEFI_EVENT Event, void* Context) {
     int32_t saved_text_cursor_row = SystemTable->ConOut->Mode->CursorRow;
     int32_t saved_text_cursor_col = SystemTable->ConOut->Mode->CursorColumn;
 
+    // Query the current text mode for the number of rows and columns.
     uint64_t text_max_cols, text_max_rows;
-    SystemTable->ConOut->QueryMode(SystemTable->ConOut, SystemTable->ConOut->Mode->Mode, &text_max_cols, &text_max_rows);
+    SystemTable->ConOut->QueryMode (
+        SystemTable->ConOut, 
+        SystemTable->ConOut->Mode->Mode, 
+        &text_max_cols, 
+        &text_max_rows
+    );
 
     // Date time will print out MM/DD/YYYY HH:MM:SS which is 19 characters.
     // Set cursor 19 characters to the right of the last column of row 0.
@@ -49,7 +55,11 @@ void UEFI_API print_datetime (UEFI_EVENT Event, void* Context) {
     datetime.Hour, datetime.Minute, datetime.Second);
 
     // Restore text cursor row and col.
-    SystemTable->ConOut->SetCursorPosition(SystemTable->ConOut, saved_text_cursor_col, saved_text_cursor_row);
+    SystemTable->ConOut->SetCursorPosition (
+        SystemTable->ConOut, 
+        saved_text_cursor_col, 
+        saved_text_cursor_row
+    );
 }
 
 /*******************************************************************************
@@ -65,9 +75,12 @@ void* read_esp_file_into_buffer (
     uint64_t*          buffer_size
 ) {
 
+    /* Get a pointer to the file handle of the root directory directory of the 
+    ESP. */
     UEFI_FILE_PROTOCOL* root = get_esp_root (ImageHandle, SystemTable);
 
-    // Get a pointer to the file handle of the file specified in the path parameter.
+    /* Get a pointer to the file handle of the file specified in the path 
+    parameter. */
     UEFI_FILE_PROTOCOL* fp;
     root->Open(root, &fp, path, UEFI_FILE_MODE_READ, 0);
     root->Close(root);
@@ -81,7 +94,11 @@ void* read_esp_file_into_buffer (
     // Allocate a pool of memory of size of the file. 
     void* file_buffer = nullptr;
     uint64_t file_buffer_size = fp_info.FileSize;
-    SystemTable->BootServices->AllocatePool(UefiLoaderData, file_buffer_size, &file_buffer);
+    SystemTable->BootServices->AllocatePool(
+        UefiLoaderData, 
+        file_buffer_size, 
+        &file_buffer
+    );
 
     // Read file into buffer.
     fp->Read(fp, &file_buffer_size, file_buffer);
@@ -95,9 +112,13 @@ void* read_esp_file_into_buffer (
 /*******************************************************************************
 PRINT CONTENTS OF A FILE BUFFER ONTO SCREEN FUNCTION
 *******************************************************************************/
-UEFI_STATUS print_file_buffer_contents (UEFI_SYSTEM_TABLE* SystemTable, void* file_contents_buffer, uint64_t file_contents_buffer_size) {
+UEFI_STATUS print_file_buffer_contents (
+    UEFI_SYSTEM_TABLE* SystemTable, 
+    void* file_contents_buffer, 
+    uint64_t file_contents_buffer_size
+) {
     
-    // Readout the file contents byte at a time.
+    // Readout the file contents one character at a time.
     char* read_char = (char *) file_contents_buffer;
     for (uint64_t idx = file_contents_buffer_size; idx > 0; idx--){
         char16_t s[2];
@@ -113,7 +134,8 @@ READ ESP PARTITION CONTENTS MENU FUNCTION
 *******************************************************************************/
 UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
 
-    // Get a pointer to the file handle of the root directory directory of the ESP.
+    /* Get a pointer to the file handle of the root directory directory of the 
+    ESP. */
     UEFI_FILE_PROTOCOL* fp = get_esp_root (ImageHandle, SystemTable);
 
     uint64_t selected_menu_option = 0;
@@ -127,8 +149,6 @@ UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
         );
         SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 
-        uint64_t file_count = 0;
-
         UEFI_FILE_INFO file_info;
         UEFI_FILE_INFO selected_file_info;
         uint64_t file_info_size = sizeof(file_info);
@@ -138,10 +158,16 @@ UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
         fp->Read(fp, &file_info_size, (void*)&file_info);
 
         // Read all directory entries.
+        uint64_t file_count = 0;
         while (file_info_size > 0) {
 
+            /* Highlight the current entry if it is the selected entry and store
+            the selected entry's file information for later use. */
             if (file_count == selected_menu_option) {
-                SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(HIGHLIGHT_FOREGROUND_COLOR, HIGHLIGHT_BACKGROUND_COLOR));
+                SystemTable->ConOut->SetAttribute (
+                    SystemTable->ConOut, 
+                    UEFI_TEXT_ATTR(HIGHLIGHT_FOREGROUND_COLOR, HIGHLIGHT_BACKGROUND_COLOR)
+                );
                 selected_file_info = file_info;
             }
 
@@ -151,8 +177,12 @@ UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
                 (file_info.Attribute & UEFI_FILE_DIRECTORY) ? u"DIR" : u"FILE", 
                 file_info.FileName);
 
+            // Do not highlight other menu options.
             if (file_count == selected_menu_option) {
-                SystemTable->ConOut->SetAttribute(SystemTable->ConOut, UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR));
+                SystemTable->ConOut->SetAttribute (
+                    SystemTable->ConOut, 
+                    UEFI_TEXT_ATTR(DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR)
+                );
             }
 
             // Read next entry if any.
@@ -169,16 +199,16 @@ UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
         if (k.ScanCode == ESC_SCANCODE) { // Escape key pressed.
             return UEFI_SUCCESS;
         } else if (k.ScanCode == UP_ARROW_SCANCODE) {
-            // Move selected menu option index down in value as user scrolls up. Rollover
-            // index to the maximum if index is at the minimum.
+            /* Move selected menu option index down in value as user scrolls up. Rollover
+            index to the maximum if index is at the minimum. */
             if (selected_menu_option == 0) {
                 selected_menu_option = (file_count - 1);
             } else {
                 selected_menu_option--;
             }
         } else if (k.ScanCode == DOWN_ARROW_SCANCODE) { // Down key pressed.
-            // Move selected menu option index up in value as user scrolls down. Rollover
-            // index to the minimum if index is at the maximum.
+            /* Move selected menu option index up in value as user scrolls down. Rollover
+            index to the minimum if index is at the maximum. */
             if ((selected_menu_option + 1) == file_count) {
                 selected_menu_option = 0;
             } else {
@@ -188,8 +218,8 @@ UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
             if ((selected_file_info.Attribute & UEFI_FILE_DIRECTORY)) // Is the selection a directory?
             {
 
-                // Close the existing file handle for the current location and
-                // assign the new handle for the new location.
+                /* Close the existing file handle for the current location and
+                assign the new handle for the new location. */
                 UEFI_FILE_PROTOCOL* new_fp;
                 fp->Open(fp, &new_fp, selected_file_info.FileName, UEFI_FILE_MODE_READ, 0);
                 fp->Close(fp);
@@ -197,10 +227,15 @@ UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
 
             } else {
 
-                // Dynamically allocate memory for a buffer large enough to store the file.
+                /* Dynamically allocate memory for a buffer large enough to 
+                store the file. */
                 void* file_contents_buffer;
                 uint64_t file_contents_buffer_size = selected_file_info.FileSize;
-                UEFI_STATUS status = SystemTable->BootServices->AllocatePool(UefiLoaderData, file_contents_buffer_size, &file_contents_buffer);
+                UEFI_STATUS status = SystemTable->BootServices->AllocatePool (
+                    UefiLoaderData, 
+                    file_contents_buffer_size, 
+                    &file_contents_buffer
+                );
 
                 UEFI_PRINT_ERROR(SystemTable, status, "Could not allocate pool of memory for buffer");
 
@@ -232,6 +267,9 @@ UEFI_STATUS read_esp (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
     return UEFI_SUCCESS;
 }
 
+/*******************************************************************************
+DISPLAY MEMORY MAP MENU FUNCTION
+*******************************************************************************/
 UEFI_STATUS display_memory_map (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
 
     // Clear screen to the default background color.
@@ -241,8 +279,8 @@ UEFI_STATUS display_memory_map (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
     );
     SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 
+    // Obtain the memory map.
     Memory_Map_Info* memory_map_i;
-
     uefi_get_memory_map (SystemTable, memory_map_i);
 
     // Calculate the number of memory map entries.
@@ -297,26 +335,37 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
 
     // Read the kernel binary executable into a buffer.
     uint64_t file_buffer_size;
-    void* kernel_buffer = read_esp_file_into_buffer (ImageHandle, SystemTable, u"\\EFI\\BOOT\\kernel.bin", &file_buffer_size);
+    void* kernel_buffer = read_esp_file_into_buffer (
+        ImageHandle, 
+        SystemTable, 
+        u"\\EFI\\BOOT\\kernel.bin", 
+        &file_buffer_size
+    );
 
+    /* Obtain the memory map in order to get the maximum memory address when 
+    setting up kernel page tables. */ 
     uint64_t PML4Address = 0;
     Memory_Map_Info* mmap_info;
     uefi_get_memory_map (SystemTable, mmap_info);
+    
+    // Setup the kernel page tables and free the memory map memory.
     Setup_Kernel_Page_Tables(SystemTable, PML4Address, mmap_info);
     SystemTable->BootServices->FreePool(mmap_info);
 
     Kernel_Handover k;
 
+    // Allocate 1 page for the PMM's null construct.
     void* pmm_null_page = nullptr;
     status = SystemTable->BootServices->AllocatePool (
         UefiLoaderData, 
-        4096, // Allocate 1 page (the minimum the function can allocate)
-        (void **)&pmm_null_page // For the PMM's null construct.
+        4096, 
+        (void **)&pmm_null_page
     );
 
+    /* Pass any OS loader reserved pages for special purposes into an array to
+    pass to the OS like the PMM null page. */
     void* os_reserved_page_sets[1];
     os_reserved_page_sets[0] = pmm_null_page; 
-
     k.os_reserved_page_sets[0] = os_reserved_page_sets[0];
 
     /* Populate kernel handover parameters object with memory map and GOP mode
@@ -324,7 +373,15 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
     k.gop = *gop->Mode;
     uefi_get_memory_map (SystemTable, &k.memory_map);
 
-    PC_Screen_Font_v1_Renderer font_renderer(ImageHandle, SystemTable, u"\\EFI\\BOOT\\zap-ext-light16.psf", k.gop, 16);
+    /* Initialize PC_Screen_Font_v1_Renderer and populate the respective kernel
+    handover field. */
+    PC_Screen_Font_v1_Renderer font_renderer (
+        ImageHandle, 
+        SystemTable, 
+        u"\\EFI\\BOOT\\zap-ext-light16.psf", 
+        k.gop, 
+        16
+    );
     k.font_renderer = &font_renderer;
 
     /* Establish a function pointer pointing to the kinary binary's executable
@@ -337,8 +394,10 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
     // Exit UEFI boot services.
     SystemTable->BootServices->ExitBootServices(ImageHandle, k.memory_map.key);
 
-    uefi_printf(SystemTable, u"Address of PML4: %h\r\n", PML4Address);
-
+    /* Write the PML4's address to the CR3 register, use our own page tables 
+    rather than UEFI's. Avoids situation like UEFI marks memory as read only in
+    it's page tables for memory that can be usable by the OS resulting in a page
+    fault. */
     write_cr3(PML4Address);
 
     /* Call the kernel's entry point to turn control over to the operating 
@@ -352,7 +411,7 @@ UEFI_STATUS UEFI_API launch_cosmOS (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* 
 }
 
 /*******************************************************************************
-MAIN FUNCTION
+BOOTLOADER ENTRY POINT FUNCTION
 *******************************************************************************/
 extern "C" { // Avoids name mangling of the UEFI entry point.
 UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* SystemTable) {
@@ -368,9 +427,9 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
     );
     SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 
-    // Create an event that is of TIMER and NOTIFY SIGNAL type that will
-    // queue the print_datetime function when the event is signaled. Pass
-    // the SystemTable as a parameter to the callback function print_datetime.
+    /* Create an event that is of TIMER and NOTIFY SIGNAL type that will
+    queue the print_datetime function when the event is signaled. Pass the 
+    SystemTable as a parameter to the callback function print_datetime. */
     UEFI_EVENT datetime_event;
     SystemTable->BootServices->CreateEvent((EVT_TIMER | EVT_NOTIFY_SIGNAL), TPL_CALLBACK, print_datetime, (void*)SystemTable, &datetime_event);
 
@@ -413,16 +472,16 @@ UEFI_STATUS UEFI_API uefi_main (UEFI_HANDLE ImageHandle, UEFI_SYSTEM_TABLE* Syst
             // Shutdown system.
             SystemTable->RuntimeServices->ResetSystem(UefiResetShutdown, UEFI_SUCCESS, 0, NULL);
         } else if (k.ScanCode == UP_ARROW_SCANCODE) { // Up arrow key pressed.
-            // Move selected menu option index down in value as user scrolls up. Rollover
-            // index to the maximum if index is at the minimum.
+            /* Move selected menu option index down in value as user scrolls up. Rollover
+            index to the maximum if index is at the minimum. */
             if (selected_menu_option == 0) {
                 selected_menu_option = (ARRAY_SIZE(menu_options) - 1);
             } else {
                 selected_menu_option--;
             }
         } else if (k.ScanCode == DOWN_ARROW_SCANCODE) { // Down arrow key pressed.
-            // Move selected menu option index up in value as user scrolls down. Rollover
-            // index to the minimum if index is at the maximum.
+            /* Move selected menu option index up in value as user scrolls down. Rollover
+            index to the minimum if index is at the maximum. */
             if ((selected_menu_option + 1) == ARRAY_SIZE(menu_options)) {
                 selected_menu_option = 0;
             } else {

@@ -1,5 +1,4 @@
-#ifndef UEFI_H
-#define UEFI_H
+#pragma once
 
 #include <stdint.h>
 
@@ -1503,6 +1502,3 @@ typedef struct {
         EFI_PARTITION_ENTRY  Gpt;
     } Info;
 } __attribute__((packed)) UEFI_PARTITION_INFO_PROTOCOL;
-
-#endif
-/* END OF UEFI.H */

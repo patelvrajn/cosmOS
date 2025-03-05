@@ -1,10 +1,15 @@
 #include "paging.h"
 #include "../uefi/uefi_console.h"
 
+/*******************************************************************************
+Setup Kernel Page Tables Function
+*******************************************************************************/
 UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, uint64_t& PML4Address, Memory_Map_Info* mmap_info) {
 
+    // Get the size of valid physical memory from the memory map.
     const uint64_t SIZE_OF_PHYSICAL_MEMORY = Get_Maximum_Memory_Address (mmap_info);
 
+    // Calculate number of page tables needed (minimum 1).
     uint64_t num_of_page_tables = 1;
     if ((SIZE_OF_PHYSICAL_MEMORY / PAGE_TABLES_VIRTUAL_ADDRESS_RANGE_SIZE) > 1) {
         num_of_page_tables = (SIZE_OF_PHYSICAL_MEMORY / PAGE_TABLES_VIRTUAL_ADDRESS_RANGE_SIZE);
@@ -13,10 +18,7 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
         }
     }
 
-    uefi_printf(SystemTable, u"Size of Physical Memory: %u\r\n", SIZE_OF_PHYSICAL_MEMORY);
-    uefi_printf(SystemTable, u"Page Tables Virtual Address Range Size: %u\r\n", PAGE_TABLES_VIRTUAL_ADDRESS_RANGE_SIZE);
-    uefi_printf(SystemTable, u"Number of Page Tables: %u\r\n", (SIZE_OF_PHYSICAL_MEMORY / PAGE_TABLES_VIRTUAL_ADDRESS_RANGE_SIZE));
-
+    // Calculate number of page directories needed (minimum 1).
     uint64_t num_of_pd_tables = 1; ;
     if ((num_of_page_tables / PAGE_TABLES_NUM_OF_ENTRIES) > 1) {
         num_of_pd_tables = (num_of_page_tables / PAGE_TABLES_NUM_OF_ENTRIES);
@@ -25,8 +27,7 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
         }
     }
 
-    uefi_printf(SystemTable, u"Number of PD Tables: %u\r\n", num_of_pd_tables);
-
+    // Calculate number of page directory pointer tables needed (minimum 1).
     uint64_t num_of_pdpt_tables = 1;
     if ((num_of_pd_tables / PAGE_TABLES_NUM_OF_ENTRIES) > 1) {
         num_of_pdpt_tables = (num_of_pd_tables / PAGE_TABLES_NUM_OF_ENTRIES);
@@ -34,11 +35,11 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
             num_of_pdpt_tables = num_of_pdpt_tables + 1;
         }
     }
-    
-    uefi_printf(SystemTable, u"Number of PDPT Tables: %u\r\n", num_of_pdpt_tables);
 
+    // Only 1 PML4 table exists in 4-level paging.
     const uint64_t NUM_OF_PML4_TABLES = 1;
 
+    // Calculate memory/number of pages needed for all levels of paging tables.
     const uint64_t MEMORY_NEEDED_FOR_PAGE_TABLES  = num_of_page_tables * sizeof(page_table);
     const uint64_t MEMORY_NEEDED_FOR_PD_TABLES    = num_of_pd_tables   * sizeof(page_directory);
     const uint64_t MEMORY_NEEDED_FOR_PDPT_TABLES  = num_of_pdpt_tables * sizeof(page_directory_pointer_table);
@@ -50,9 +51,9 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
         num_of_pages_needed_for_tables += 1;
     }
 
-    uefi_printf(SystemTable, u"Total memory needed for tables: %u\r\n", TOTAL_MEMORY_NEEDED_FOR_TABLES);
-    uefi_printf(SystemTable, u"Num of Pages for tables: %u\r\n", num_of_pages_needed_for_tables);
-
+    /* Allocate the number of pages needed for all levels of paging. Note the 
+    usage of AllocatePages vs AllocatePool, we need to guarantee 4KB aligned 
+    address to write into the CR3 register. */
     void* paging_memory = nullptr;
     UEFI_STATUS status = SystemTable->BootServices->AllocatePages (
         UEFI_ALLOCATE_TYPE::AllocateAnyPages,
@@ -203,8 +204,6 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
     }
 
     *((page_map_level_4*)pml4_ptr) = pml4;
-
-    uefi_printf(SystemTable, u"PML4 Address: %h\r\n", PML4Address);
 
     return UEFI_SUCCESS;
 

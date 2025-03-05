@@ -528,6 +528,9 @@ bool Physical_Memory_Manager::Is_Physical_Memory_Region_Type_Usable (UEFI_MEMORY
 
 }
 
+/*******************************************************************************
+Is the Memory Region described in the UEFI Memory Map Usable by the OS?
+*******************************************************************************/
 bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (Memory_Map_Info* mmap_info, void* addr) {
 
     // Calculate the number of memory map entries.
@@ -556,7 +559,13 @@ bool Physical_Memory_Manager::Is_Physical_Memory_Region_Usable (Memory_Map_Info*
     return false;
 }
 
-uint64_t Physical_Memory_Manager::Get_First_Address_in_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
+/*******************************************************************************
+Get Expacted First Address of the next Memory Region
+
+Gets the first address of the next region by adding the size in number of pages
+to the starting physical address of the current region.
+*******************************************************************************/
+uint64_t Physical_Memory_Manager::Get_Expected_First_Address_in_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
 
     // Calculate the number of memory map entries.
     uint64_t num_of_mem_map_entries = mmap_info->size / mmap_info->desc_size;
@@ -578,6 +587,12 @@ uint64_t Physical_Memory_Manager::Get_First_Address_in_Next_Memory_Region (Memor
     return 0;
 }
 
+/*******************************************************************************
+Get Next Memory Region
+
+Gets the first address of the next region by looking for the smallest starting
+physical address larger than the supplied address.
+*******************************************************************************/
 uint64_t Physical_Memory_Manager::Get_Next_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
 
     // Calculate the number of memory map entries.
@@ -609,6 +624,9 @@ uint64_t Physical_Memory_Manager::Get_Next_Memory_Region (Memory_Map_Info* mmap_
 
 }
 
+/*******************************************************************************
+Get Size of Memory Region
+*******************************************************************************/
 uint64_t Physical_Memory_Manager::Get_Size_of_Memory_Region (Memory_Map_Info* mmap_info, void* addr) {
 
     // Calculate the number of memory map entries.
@@ -681,7 +699,7 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, vo
                 does not match the first address of the next memory region there
                 is an address gap; this is the end of this accumulated region 
                 and go to the next region. */
-                if (Get_First_Address_in_Next_Memory_Region (mmap_info, current_memory) != 
+                if (Get_Expected_First_Address_in_Next_Memory_Region (mmap_info, current_memory) != 
                     Get_Next_Memory_Region (mmap_info, current_memory)) {
                     current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
                     break;
@@ -690,6 +708,8 @@ Physical_Memory_Manager::Physical_Memory_Manager (Memory_Map_Info* mmap_info, vo
                 // Move forward to next memory region.
                 current_memory = (void*)(Get_Next_Memory_Region (mmap_info, current_memory));
 
+                /* The next memory region's address is zero indicating there is 
+                no next memory region. */
                 if (current_memory == ((void*)0)) {
                     break;
                 }
@@ -759,7 +779,8 @@ void* Physical_Memory_Manager::allocate_physical_frames (uint64_t desired_size) 
         return nullptr;
     }
 
-    // Remove the best fit node form the red black tree. 
+    /* Remove the best fit node form the red black tree because the memory it
+    represents is now allocated. */
     pmm_red_black_tree_delete(best_fit_node);
 
     // Update header and boundary tag to say this region is now allocated.
@@ -773,7 +794,9 @@ void* Physical_Memory_Manager::allocate_physical_frames (uint64_t desired_size) 
     boundary_tag.size_and_flags = size_and_flags;
     *((physical_memory_boundary_tag*)(((uint8_t*)best_fit_node) + PMM_RED_BLACK_TREE_KEY_VALUE(best_fit_node) - sizeof(physical_memory_boundary_tag))) = boundary_tag;
 
-    // If the best fit memory region is bigger than desired, split the region.
+    /* If the best fit memory region is bigger than desired, split the region
+    into a region of the desired size and a region of size of the remaining 
+    memory. */
     if (PMM_RED_BLACK_TREE_KEY_VALUE(best_fit_node) > desired_size_modified) {
 
         /* Change the best fit node's size in the header and create a new 
@@ -788,7 +811,8 @@ void* Physical_Memory_Manager::allocate_physical_frames (uint64_t desired_size) 
         boundary_tag.size_and_flags = size_and_flags;
         *((physical_memory_boundary_tag*)(((uint8_t*)best_fit_node) + desired_size_modified - sizeof(physical_memory_boundary_tag))) = boundary_tag;
 
-        // Create the new memory region with a header and boundary tag.
+        /* Create the new memory region of size of the remaining memory with a 
+        header and boundary tag. */
         uint64_t size_of_new_node = PMM_RED_BLACK_TREE_KEY_VALUE(best_fit_node) - desired_size_modified;
         void* new_memory_region = (void*)(((uint8_t*)best_fit_node) + desired_size_modified);
 
@@ -827,38 +851,38 @@ void Physical_Memory_Manager::free_physical_frames (void* memory_to_free) {
     void* left_memory_address = (void*)(((uint8_t*)(memory_to_free_modified)) - sizeof(physical_memory_boundary_tag));
     bool left_is_free_and_usable = false;
 
-    // Check if memory region is usable.
+    // Check if we can coalesce to the left. Check if memory region is usable.
     if (Is_Physical_Memory_Region_Usable(m_mmap_info, left_memory_address)) {
 
         // Is the memory region free?
         if (PMM_IS_ALLOCATED_MEMORY_FLAG(left_memory_address) == 0) {
             left_is_free_and_usable = true;
         }
-
     }
+
+    /* Jump to beginning of the left memory region. */
+    left_memory_address = (void*)(((uint8_t*)(left_memory_address)) - (PMM_RED_BLACK_TREE_KEY_VALUE(left_memory_address) - sizeof(physical_memory_boundary_tag)));
 
     // Jump to the region on right.
     void* right_memory_address = (void*)(((uint8_t*)(memory_to_free_modified)) + PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified));
     bool right_is_free_and_usable = false;
 
-    // Try coalescing to the right. Check if memory region is usable.
+    // Check if we can coalesce to the right. Check if memory region is usable.
     if (Is_Physical_Memory_Region_Usable(m_mmap_info, right_memory_address)) {
 
         // Is the memory region free?
         if (PMM_IS_ALLOCATED_MEMORY_FLAG(right_memory_address) == 0) {
             right_is_free_and_usable = true;
         }
-
     }
-
-    /* Jump to beginning of the left memory region. */
-    left_memory_address = (void*)(((uint8_t*)(left_memory_address)) - (PMM_RED_BLACK_TREE_KEY_VALUE(left_memory_address) - sizeof(physical_memory_boundary_tag)));
 
     // Coalesce with the left and right memory regions. 
     if (left_is_free_and_usable && right_is_free_and_usable) {
 
+        // Calculate size of the coalesced region.
         uint64_t coalesced_size = PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified) + PMM_RED_BLACK_TREE_KEY_VALUE(left_memory_address) + PMM_RED_BLACK_TREE_KEY_VALUE(right_memory_address);
 
+        // Start from the left region and form the newly coalesced region.
         physical_memory_size_and_flags size_and_flags;
         size_and_flags.aligned_size = coalesced_size / 8;
         size_and_flags.is_allocated = 0;
@@ -869,13 +893,20 @@ void Physical_Memory_Manager::free_physical_frames (void* memory_to_free) {
         boundary_tag.size_and_flags = size_and_flags;
         *((physical_memory_boundary_tag*)(((uint8_t*)left_memory_address) + coalesced_size - sizeof(physical_memory_boundary_tag))) = boundary_tag;
 
+        /* Don't need to add the recently freed memory node to the red black 
+        tree because it was coalesced into the left memory region. However, we 
+        must remove the right region that was coalesced from the tree. The left
+        memory region should already be in tree as it was free and usable. */ 
         pmm_red_black_tree_delete(right_memory_address);
 
     // Coalesce with the right memory region.
     } else if ((!left_is_free_and_usable) && right_is_free_and_usable) {
         
+        // Calculate size of the coalesced region.
         uint64_t coalesced_size = PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified) + PMM_RED_BLACK_TREE_KEY_VALUE(right_memory_address);
 
+        /* Start from the recently freed memory region and form the newly 
+        coalesced region. */
         physical_memory_size_and_flags size_and_flags;
         size_and_flags.aligned_size = coalesced_size / 8;
         size_and_flags.is_allocated = 0;
@@ -886,14 +917,19 @@ void Physical_Memory_Manager::free_physical_frames (void* memory_to_free) {
         boundary_tag.size_and_flags = size_and_flags;
         *((physical_memory_boundary_tag*)(((uint8_t*)memory_to_free_modified) + coalesced_size - sizeof(physical_memory_boundary_tag))) = boundary_tag;
 
+        /* Insert the newly coalesced region into the tree that starts from the
+        recently freed memory region. Remove the right region from the tree that 
+        was coalesced.*/
         pmm_red_black_tree_insert(memory_to_free_modified);
         pmm_red_black_tree_delete(right_memory_address);
 
     // Coalesce with the left memory region.
     } else if (left_is_free_and_usable && (!right_is_free_and_usable)) {
 
+        // Calculate size of the coalesced region.
         uint64_t coalesced_size = PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified) + PMM_RED_BLACK_TREE_KEY_VALUE(left_memory_address);
 
+        // Start from the left region and form the newly coalesced region.
         physical_memory_size_and_flags size_and_flags;
         size_and_flags.aligned_size = coalesced_size / 8;
         size_and_flags.is_allocated = 0;
@@ -903,6 +939,12 @@ void Physical_Memory_Manager::free_physical_frames (void* memory_to_free) {
         physical_memory_boundary_tag boundary_tag;
         boundary_tag.size_and_flags = size_and_flags;
         *((physical_memory_boundary_tag*)(((uint8_t*)left_memory_address) + coalesced_size - sizeof(physical_memory_boundary_tag))) = boundary_tag;
+
+        /* Don't need to add the recently freed memory node to the red black 
+        tree because it was coalesced into the left memory region. The left
+        memory region should already be in tree as it was free and usable. The 
+        right regon is not free and usable thus it does not belong in the tree. 
+        */ 
 
     // No coalescing.
     } else {
@@ -918,6 +960,8 @@ void Physical_Memory_Manager::free_physical_frames (void* memory_to_free) {
         boundary_tag.size_and_flags = size_and_flags;
         *((physical_memory_boundary_tag*)(((uint8_t*)memory_to_free_modified) + PMM_RED_BLACK_TREE_KEY_VALUE(memory_to_free_modified) - sizeof(physical_memory_boundary_tag))) = boundary_tag;
 
+        /* Insert the recently freed memory region into the tree. The left and 
+        right regions are not free and usable thus don't belong in the tree. */
         pmm_red_black_tree_insert(memory_to_free_modified);
 
     }

@@ -5,16 +5,21 @@
 #include "../shared/graphics/fonts/pc_screen_font_v1_renderer.h"
 #include "../shared/assembly_wrappers/registers.h"
 
+/*******************************************************************************
+KERNEL ENTRY POINT FUNCTION
+*******************************************************************************/
 extern "C" { // Avoids name mangling of the kernel's entry point.
 __attribute__((section(".kernel"))) int UEFI_API kernel_main (Kernel_Handover* k) {
 
+    // Retrieve the instantiated font renderer from the kernel handover.
     PC_Screen_Font_v1_Renderer* font_renderer = k->font_renderer;
 
+    // PMM initialization.
     Physical_Memory_Manager pmm (&k->memory_map, k->os_reserved_page_sets[0]);
 
+    // Quick test of PMM.
     void* mem_one = pmm.allocate_physical_frames(100 * 4096);
     void* mem_two = pmm.allocate_physical_frames(100);
-
     pmm.free_physical_frames(mem_two);
     pmm.free_physical_frames(mem_one);
 
