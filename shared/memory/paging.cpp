@@ -18,6 +18,12 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
         }
     }
 
+    // Calculate number of page table entries.
+    uint64_t num_of_page_table_entries = (SIZE_OF_PHYSICAL_MEMORY / PAGE_TABLES_ENTRY_VIRTUAL_ADDRESS_RANGE_SIZE);
+    if ((SIZE_OF_PHYSICAL_MEMORY % PAGE_TABLES_ENTRY_VIRTUAL_ADDRESS_RANGE_SIZE) != 0) {
+        num_of_page_table_entries += 1;
+    }
+
     // Calculate number of page directories needed (minimum 1).
     uint64_t num_of_pd_tables = 1; ;
     if ((num_of_page_tables / PAGE_TABLES_NUM_OF_ENTRIES) > 1) {
@@ -76,6 +82,7 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
 
     // Page tables
     uint64_t pte_frame_address = 0;
+    uint64_t pte_count         = 0;
     for (int i = 0; i < num_of_page_tables; i++) {
         
         page_table pt = {};
@@ -101,17 +108,25 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
 
             pt.entries[i] = pte;
             pte_frame_address += PAGE_TABLES_ENTRY_VIRTUAL_ADDRESS_RANGE_SIZE;
+            pte_count++;
 
+            if (pte_count == num_of_page_table_entries) {
+                break;
+            }
         }
 
         *((page_table*)pt_ptr) = pt;
         pt_ptr = (void*)(((uint8_t*)pt_ptr) + sizeof(page_table));       
 
+        if (pte_count == num_of_page_table_entries) {
+            break;
+        }
     }
 
     pt_ptr = (void*) PT_PTR_STARTING_ADDR;
 
     // Page directories
+    uint64_t pde_count = 0;
     for (int i = 0; i < num_of_pd_tables; i++) {
         
         page_directory pd = {};
@@ -134,18 +149,26 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
             pde.execute_disable          = 0;
 
             pd.entries[i] = pde;
-            pt_ptr = (void*)(((uint8_t*)pt_ptr) + sizeof(page_table));  
-
+            pt_ptr = (void*)(((uint8_t*)pt_ptr) + sizeof(page_table));
+            pde_count++;
+            
+            if (pde_count == num_of_page_tables) {
+                break;
+            }
         }
     
         *((page_directory*)pd_ptr) = pd;
         pd_ptr = (void*)(((uint8_t*)pd_ptr) + sizeof(page_directory));
 
+        if (pde_count == num_of_page_tables) {
+            break;
+        }
     }
 
     pd_ptr = (void*) PD_PTR_STARTING_ADDR;
 
     // Page directory pointer tables
+    uint64_t pdpte_count = 0;
     for (int i = 0; i < num_of_pdpt_tables; i++) {
         
         page_directory_pointer_table pdpt = {};
@@ -169,12 +192,19 @@ UEFI_STATUS UEFI_API Setup_Kernel_Page_Tables (UEFI_SYSTEM_TABLE* SystemTable, u
 
             pdpt.entries[i] = pdpte;
             pd_ptr = (void*)(((uint8_t*)pd_ptr) + sizeof(page_directory));  
+            pdpte_count++;
 
+            if (pdpte_count == num_of_pd_tables) {
+                break;
+            }
         }
     
         *((page_directory_pointer_table*)pdpt_ptr) = pdpt;
         pdpt_ptr = (void*)(((uint8_t*)pdpt_ptr) + sizeof(page_directory_pointer_table));
 
+        if (pdpte_count == num_of_pd_tables) {
+            break;
+        }
     }
 
     pdpt_ptr = (void*) PDPT_PTR_STARTING_ADDR;
